@@ -1,0 +1,4 @@
+name: GlowAPI
+main: org.inventivetalent.glow.GlowPlugin
+author: inventivetalent
+version: ${project.version}
