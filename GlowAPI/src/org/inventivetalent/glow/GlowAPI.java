@@ -170,6 +170,32 @@ public class GlowAPI {
 	}
 
 	/**
+	 * Checks if an entity is glowing
+	 *
+	 * @param entity    {@link Entity} to check
+	 * @param receivers Collection of {@link Player} receivers to check
+	 * @param checkAll  if <code>true</code>, this only returns <code>true</code> if the entity is glowing for all receivers;
+	 *                  if <code>false</code> this returns <code>true</code> if the entity is glowing for any of the receivers
+	 * @return <code>true</code> if the entity appears glowing to the players
+	 */
+	public static boolean isGlowing(Entity entity, Collection<? extends Player> receivers, boolean checkAll) {
+		if (checkAll) {
+			boolean glowing = true;
+			for (Player receiver : receivers) {
+				if (!isGlowing(entity, receiver)) {
+					glowing = false;
+				}
+			}
+			return glowing;
+		} else {
+			for (Player receiver : receivers) {
+				if (isGlowing(entity, receiver)) { return true; }
+			}
+		}
+		return false;
+	}
+
+	/**
 	 * Get the glow-color of an entity
 	 *
 	 * @param entity   {@link Entity} to get the color for
