@@ -130,6 +130,20 @@ public class GlowAPI {
 	 * Set the glowing-color of an entity
 	 *
 	 * @param entity    {@link Entity} to update
+	 * @param glowing   whether the entity is glowing or not
+	 * @param receivers Collection of {@link Player}s that will see the update
+	 * @see #setGlowing(Entity, Color, Player)
+	 */
+	public static void setGlowing(Entity entity, boolean glowing, Collection<? extends Player> receivers) {
+		for (Player receiver : receivers) {
+			setGlowing(entity, glowing, receiver);
+		}
+	}
+
+	/**
+	 * Set the glowing-color of an entity
+	 *
+	 * @param entity    {@link Entity} to update
 	 * @param color     {@link org.inventivetalent.glow.GlowAPI.Color} of the glow, or <code>null</code> to stop glowing
 	 * @param receivers Collection of {@link Player}s that will see the update
 	 */
