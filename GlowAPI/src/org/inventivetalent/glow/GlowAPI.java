@@ -20,13 +20,20 @@ public class GlowAPI {
 
 	//Metadata
 	private static Class<?> PacketPlayOutEntityMetadata;
-	private static Class<?> DataWatcher;
-	private static Class<?> DataWatcherItem;
+	static         Class<?> DataWatcher;
+	static         Class<?> DataWatcherItem;
+	private static Class<?> Entity;
 
 	private static FieldResolver PacketPlayOutMetadataFieldResolver;
 	private static FieldResolver EntityFieldResolver;
+	private static FieldResolver DataWatcherFieldResolver;
+	static         FieldResolver DataWatcherItemFieldResolver;
 
 	private static ConstructorResolver DataWatcherItemConstructorResolver;
+
+	private static MethodResolver DataWatcherMethodResolver;
+	static         MethodResolver DataWatcherItemMethodResolver;
+	private static MethodResolver EntityMethodResolver;
 
 	//Scoreboard
 	private static Class<?> PacketPlayOutScoreboardTeam;
@@ -219,6 +226,9 @@ public class GlowAPI {
 			if (DataWatcherItem == null) {
 				DataWatcherItem = NMS_CLASS_RESOLVER.resolve("DataWatcher$Item");
 			}
+			if (Entity == null) {
+				Entity = NMS_CLASS_RESOLVER.resolve("Entity");
+			}
 			if (PacketPlayOutMetadataFieldResolver == null) {
 				PacketPlayOutMetadataFieldResolver = new FieldResolver(PacketPlayOutEntityMetadata);
 			}
@@ -226,19 +236,37 @@ public class GlowAPI {
 				DataWatcherItemConstructorResolver = new ConstructorResolver(DataWatcherItem);
 			}
 			if (EntityFieldResolver == null) {
-				EntityFieldResolver = new FieldResolver(NMS_CLASS_RESOLVER.resolve("Entity"));
+				EntityFieldResolver = new FieldResolver(Entity);
+			}
+			if (DataWatcherMethodResolver == null) {
+				DataWatcherMethodResolver = new MethodResolver(DataWatcher);
+			}
+			if (DataWatcherItemMethodResolver == null) {
+				DataWatcherItemMethodResolver = new MethodResolver(DataWatcherItem);
+			}
+			if (EntityMethodResolver == null) {
+				EntityMethodResolver = new MethodResolver(Entity);
+			}
+			if (DataWatcherFieldResolver == null) {
+				DataWatcherFieldResolver = new FieldResolver(DataWatcher);
 			}
 
+			List list = new ArrayList();
+
+			//Existing values
+			Object dataWatcher = EntityMethodResolver.resolve("getDataWatcher").invoke(Minecraft.getHandle(entity));
+			Map<Integer, Object> dataWatcherItems = (Map<Integer, Object>) DataWatcherFieldResolver.resolve("c").get(dataWatcher);
+
 			Object dataWatcherObject = EntityFieldResolver.resolve("ax").get(null);//Byte-DataWatcherObject
-			byte prev = (byte) (wasGlowing ? 64 : 0);
+			byte prev = (byte) (dataWatcherItems.isEmpty() ? 0 : DataWatcherItemMethodResolver.resolve("b").invoke(dataWatcherItems.get(0)));
 			byte b = (byte) (glowing ? (prev | 1 << 6) : (prev & ~(1 << 6)));//6 = glowing index
 			Object dataWatcherItem = DataWatcherItemConstructorResolver.resolveFirstConstructor().newInstance(dataWatcherObject, b);
 
-			List list = new ArrayList();
+			//The glowing item
 			list.add(dataWatcherItem);
 
 			Object packetMetadata = PacketPlayOutEntityMetadata.newInstance();
-			PacketPlayOutMetadataFieldResolver.resolve("a").set(packetMetadata, entity.getEntityId());
+			PacketPlayOutMetadataFieldResolver.resolve("a").set(packetMetadata, -entity.getEntityId());//Use the negative ID so we can identify our own packet
 			PacketPlayOutMetadataFieldResolver.resolve("b").set(packetMetadata, list);
 
 			sendPacket(packetMetadata, receiver);
