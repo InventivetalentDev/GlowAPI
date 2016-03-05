@@ -41,7 +41,7 @@ public class GlowPlugin extends JavaPlugin implements Listener {
 					}
 
 					List b = (List) sentPacket.getPacketValue("b");
-					if (b.isEmpty()) {
+					if (b == null || b.isEmpty()) {
 						return;//Nothing to modify
 					}
 
