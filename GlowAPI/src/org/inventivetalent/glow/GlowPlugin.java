@@ -6,6 +6,7 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -59,9 +60,12 @@ public class GlowPlugin extends JavaPlugin implements Listener {
 							try {
 								//Update the DataWatcher Item
 								Object prevItem = b.get(0);
-								byte prev = (byte) GlowAPI.DataWatcherItemMethodResolver.resolve("b").invoke(prevItem);
-								byte bte = (byte) (true/*Maybe use the isGlowing result*/ ? (prev | 1 << 6) : (prev & ~(1 << 6)));//6 = glowing index
-								GlowAPI.DataWatcherItemFieldResolver.resolve("b").set(prevItem, bte);
+								Object prevObj = GlowAPI.DataWatcherItemMethodResolver.resolve("b").invoke(prevItem);
+								if (prevObj instanceof Byte) {
+									byte prev = (byte) prevObj;
+									byte bte = (byte) (true/*Maybe use the isGlowing result*/ ? (prev | 1 << 6) : (prev & ~(1 << 6)));//6 = glowing index
+									GlowAPI.DataWatcherItemFieldResolver.resolve("b").set(prevItem, bte);
+								}
 							} catch (Exception e) {
 								throw new RuntimeException(e);
 							}
@@ -81,6 +85,13 @@ public class GlowPlugin extends JavaPlugin implements Listener {
 				getLogger().info("Metrics started");
 			}
 		} catch (Exception e) {
+		}
+	}
+
+	@EventHandler
+	public void on(PlayerInteractEvent event) {
+		for (Entity entity : event.getPlayer().getNearbyEntities(16, 16, 16)) {
+			GlowAPI.setGlowing(entity, true, Bukkit.getOnlinePlayers());
 		}
 	}
 
