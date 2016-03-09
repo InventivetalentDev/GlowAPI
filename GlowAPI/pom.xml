@@ -53,7 +53,7 @@
                                     <include>org.mcstats.*</include>
                                     <include>org.inventivetalent:glowapi**</include>
                                     <include>org.inventivetalent:reflectionhelper**</include>
-                                    <include>org.inventivetalent:apihelper**</include>
+                                    <include>org.inventivetalent:apimanager**</include>
                                 </includes>
                             </artifactSet>
                         </configuration>
@@ -103,8 +103,8 @@
         </dependency>
         <dependency>
             <groupId>org.inventivetalent</groupId>
-            <artifactId>apihelper</artifactId>
-            <version>[1.0.0,)</version>
+            <artifactId>apimanager</artifactId>
+            <version>[1.0.1,)</version>
         </dependency>
     </dependencies>
 
