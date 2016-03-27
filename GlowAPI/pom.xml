@@ -94,7 +94,7 @@
         <dependency>
             <groupId>org.inventivetalent.packetlistener</groupId>
             <artifactId>api</artifactId>
-            <version>[3.1.0,)</version>
+            <version>[3.3.3,)</version>
         </dependency>
         <dependency>
             <groupId>org.inventivetalent</groupId>
@@ -104,7 +104,7 @@
         <dependency>
             <groupId>org.inventivetalent</groupId>
             <artifactId>apimanager</artifactId>
-            <version>[1.0.1,)</version>
+            <version>[1.0.2,)</version>
         </dependency>
     </dependencies>
 
