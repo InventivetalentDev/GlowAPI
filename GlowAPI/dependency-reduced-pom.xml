@@ -4,7 +4,7 @@
   <groupId>org.inventivetalent</groupId>
   <artifactId>glowapi</artifactId>
   <name>GlowAPI</name>
-  <version>1.4.0</version>
+  <version>1.4.1</version>
   <build>
     <sourceDirectory>src</sourceDirectory>
     <resources>
@@ -51,6 +51,16 @@
                   <include>org.inventivetalent:apimanager**</include>
                 </includes>
               </artifactSet>
+              <relocations>
+                <relocation>
+                  <pattern>org.mcstats</pattern>
+                  <shadedPattern>org.inventivetalent.glow.mcstats</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>org.inventivetalent.reflection</pattern>
+                  <shadedPattern>org.inventivetalent.glow.reflection</shadedPattern>
+                </relocation>
+              </relocations>
             </configuration>
           </execution>
         </executions>
