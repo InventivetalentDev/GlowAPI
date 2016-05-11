@@ -211,8 +211,7 @@ public class GlowAPI implements API, Listener {
 	 *
 	 * @param entity    {@link Entity} to check
 	 * @param receivers Collection of {@link Player} receivers to check
-	 * @param checkAll  if <code>true</code>, this only returns <code>true</code> if the entity is glowing for all receivers;
-	 *                  if <code>false</code> this returns <code>true</code> if the entity is glowing for any of the receivers
+	 * @param checkAll  if <code>true</code>, this only returns <code>true</code> if the entity is glowing for all receivers; if <code>false</code> this returns <code>true</code> if the entity is glowing for any of the receivers
 	 * @return <code>true</code> if the entity appears glowing to the players
 	 */
 	public static boolean isGlowing(Entity entity, Collection<? extends Player> receivers, boolean checkAll) {
@@ -375,9 +374,13 @@ public class GlowAPI implements API, Listener {
 			PlayerConnectionMethodResolver = new MethodResolver(NMS_CLASS_RESOLVER.resolve("PlayerConnection"));
 		}
 
-		Object handle = Minecraft.getHandle(p);
-		final Object connection = EntityPlayerFieldResolver.resolve("playerConnection").get(handle);
-		PlayerConnectionMethodResolver.resolve("sendPacket").invoke(connection, packet);
+		try {
+			Object handle = Minecraft.getHandle(p);
+			final Object connection = EntityPlayerFieldResolver.resolve("playerConnection").get(handle);
+			PlayerConnectionMethodResolver.resolve("sendPacket").invoke(connection, packet);
+		} catch (ReflectiveOperationException e) {
+			throw new RuntimeException(e);
+		}
 	}
 
 	/**
