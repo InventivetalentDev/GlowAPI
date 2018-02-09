@@ -1,8 +1,14 @@
 package org.inventivetalent.glow;
 
+import org.bukkit.Bukkit;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.inventivetalent.apihelper.APIManager;
-import org.mcstats.MetricsLite;
+import org.bstats.bukkit.MetricsLite;
+
+import java.util.Random;
 
 public class GlowPlugin extends JavaPlugin {
 
@@ -18,16 +24,17 @@ public class GlowPlugin extends JavaPlugin {
 
 	@Override
 	public void onEnable() {
-		try {
-			MetricsLite metrics = new MetricsLite(this);
-			if (metrics.start()) {
-				getLogger().info("Metrics started");
-			}
-		} catch (Exception e) {
-		}
+		new MetricsLite(this);
 
 		//Initialize this API of the plugin got loaded
 		APIManager.initAPI(GlowAPI.class);
+
+		Bukkit.getPluginManager().registerEvents(new Listener() {
+			@EventHandler
+			public void on(PlayerInteractEvent event) {
+				GlowAPI.setGlowing(event.getPlayer(), GlowAPI.Color.values()[new Random().nextInt(GlowAPI.Color.values().length-1)], Bukkit.getOnlinePlayers());
+			}
+		}, this);
 	}
 
 }

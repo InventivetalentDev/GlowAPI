@@ -470,12 +470,14 @@ public class GlowAPI implements API, Listener {
 
 							try {
 								//Update the DataWatcher Item
-								Object prevItem = b.get(0);
-								Object prevObj = GlowAPI.DataWatcherItemMethodResolver.resolve("b").invoke(prevItem);
-								if (prevObj instanceof Byte) {
-									byte prev = (byte) prevObj;
-									byte bte = (byte) (true/*Maybe use the isGlowing result*/ ? (prev | 1 << 6) : (prev & ~(1 << 6)));//6 = glowing index
-									GlowAPI.DataWatcherItemFieldResolver.resolve("b").set(prevItem, bte);
+								//								Object prevItem = b.get(0);
+								for (Object prevItem : b) {
+									Object prevObj = GlowAPI.DataWatcherItemMethodResolver.resolve("b").invoke(prevItem);
+									if (prevObj instanceof Byte) {
+										byte prev = (byte) prevObj;
+										byte bte = (byte) (true/*Maybe use the isGlowing result*/ ? (prev | 1 << 6) : (prev & ~(1 << 6)));//6 = glowing index
+										GlowAPI.DataWatcherItemFieldResolver.resolve("b").set(prevItem, bte);
+									}
 								}
 							} catch (Exception e) {
 								throw new RuntimeException(e);
