@@ -56,6 +56,9 @@ public class GlowAPI implements API, Listener {
 
 	private static FieldResolver PacketScoreboardTeamFieldResolver;
 
+	private static ConstructorResolver ChatComponentTextResolver;
+	private static MethodResolver EnumChatFormatResolver;
+
 	//Packets
 	private static FieldResolver  EntityPlayerFieldResolver;
 	private static MethodResolver PlayerConnectionMethodResolver;
@@ -335,6 +338,9 @@ public class GlowAPI implements API, Listener {
 			if (PacketScoreboardTeamFieldResolver == null) {
 				PacketScoreboardTeamFieldResolver = new FieldResolver(PacketPlayOutScoreboardTeam);
 			}
+			if(ChatComponentTextResolver == null) {
+				ChatComponentTextResolver = new ConstructorResolver(NMS_CLASS_RESOLVER.resolve("ChatComponentText"));
+			}
 
 			Object packetScoreboardTeam = PacketPlayOutScoreboardTeam.newInstance();
 			PacketScoreboardTeamFieldResolver.resolve("i").set(packetScoreboardTeam, createNewTeam ? 0 : addEntity ? 3 : 4);//Mode (0 = create, 3 = add entity, 4 = remove entity)
@@ -344,10 +350,14 @@ public class GlowAPI implements API, Listener {
 
 			if (createNewTeam) {
 				PacketScoreboardTeamFieldResolver.resolve("g").set(packetScoreboardTeam, color.packetValue);//Color -> this is what we care about
-				PacketScoreboardTeamFieldResolver.resolve("c").set(packetScoreboardTeam, "§" + color.colorCode);//prefix - for some reason this controls the color, even though there's the extra color value...
 
-				PacketScoreboardTeamFieldResolver.resolve("b").set(packetScoreboardTeam, color.getTeamName());//Display name
-				PacketScoreboardTeamFieldResolver.resolve("d").set(packetScoreboardTeam, "");//suffix
+				Object prefix = ChatComponentTextResolver.resolveFirstConstructor().newInstance("§" + color.colorCode);
+				Object displayName = ChatComponentTextResolver.resolveFirstConstructor().newInstance(color.getTeamName());
+				Object suffix = ChatComponentTextResolver.resolveFirstConstructor().newInstance("");
+
+				PacketScoreboardTeamFieldResolver.resolve("c").set(packetScoreboardTeam, prefix);//prefix - for some reason this controls the color, even though there's the extra color value...
+				PacketScoreboardTeamFieldResolver.resolve("b").set(packetScoreboardTeam, displayName);//Display name
+				PacketScoreboardTeamFieldResolver.resolve("d").set(packetScoreboardTeam, suffix);//suffix
 				PacketScoreboardTeamFieldResolver.resolve("j").set(packetScoreboardTeam, 0);//Options - let's just ignore them for now
 			}
 
@@ -407,11 +417,21 @@ public class GlowAPI implements API, Listener {
 		WHITE(15, "f"),
 		NONE(-1, "");
 
-		int    packetValue;
+		Object packetValue;
 		String colorCode;
 
 		Color(int packetValue, String colorCode) {
-			this.packetValue = packetValue;
+			try {
+				if(EnumChatFormatResolver == null) {
+					EnumChatFormatResolver = new MethodResolver(NMS_CLASS_RESOLVER.resolve("EnumChatFormat"));
+				}
+
+				this.packetValue = EnumChatFormatResolver.resolve(new ResolverQuery("a", int.class)).invoke(null, packetValue);
+			}
+			catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException | NoSuchMethodException | ClassNotFoundException e) {
+				e.printStackTrace();
+			}
+
 			this.colorCode = colorCode;
 		}
 
