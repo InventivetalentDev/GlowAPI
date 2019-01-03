@@ -74,14 +74,12 @@
     </build>
     <distributionManagement>
         <repository>
-            <id>releases</id>
-            <name>Internal Releases</name>
-            <url>http://repo.inventivetalent.org/content/repositories/releases/</url>
+            <id>sonatype-nexus-releases</id>
+            <url>https://repo.inventivetalent.org/content/repositories/releases/</url>
         </repository>
         <snapshotRepository>
-            <id>snapshots</id>
-            <name>Internal Releases</name>
-            <url>http://repo.inventivetalent.org/content/repositories/snapshots/</url>
+            <id>sonatype-nexus-snapshots</id>
+            <url>https://repo.inventivetalent.org/content/repositories/snapshots/</url>
         </snapshotRepository>
     </distributionManagement>
     <dependencies>
