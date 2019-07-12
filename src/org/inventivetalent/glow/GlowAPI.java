@@ -537,6 +537,7 @@ public class GlowAPI implements API, Listener {
 
 	private static FieldResolver  CraftWorldFieldResolver;
 	private static FieldResolver  WorldFieldResolver;
+	private static FieldResolver  WorldServerFieldResolver;
 	private static MethodResolver IntHashMapMethodResolver;
 
 	public static Entity getEntityById(World world, int entityId) {
@@ -547,15 +548,33 @@ public class GlowAPI implements API, Listener {
 			if (WorldFieldResolver == null) {
 				WorldFieldResolver = new FieldResolver(nmsClassResolver.resolve("World"));
 			}
-			if (IntHashMapMethodResolver == null) {
-				IntHashMapMethodResolver = new MethodResolver(nmsClassResolver.resolve("IntHashMap"));
+			if (WorldServerFieldResolver == null) {
+				WorldServerFieldResolver = new FieldResolver(nmsClassResolver.resolve("WorldServer"));
 			}
 			if (EntityMethodResolver == null) {
 				EntityMethodResolver = new MethodResolver(nmsClassResolver.resolve("Entity"));
 			}
 
-			Object entitiesById = WorldFieldResolver.resolve("entitiesById").get(CraftWorldFieldResolver.resolve("world").get(world));
-			Object entity = IntHashMapMethodResolver.resolve(new ResolverQuery("get", int.class)).invoke(entitiesById, entityId);
+			Object nmsWorld = CraftWorldFieldResolver.resolve("world").get(world);
+			Object entitiesById;
+			// NOTE: this check can be false, if the v1_14_R1 doesn't exist (stupid java), i.e. in old ReflectionHelper versions
+			if (Minecraft.VERSION.newerThan(Minecraft.Version.v1_8_R1)
+					&& Minecraft.VERSION.olderThan(Minecraft.Version.v1_14_R1)) { /* seriously?! between 1.8 and 1.14 entitiesyId was moved to World */
+				entitiesById = WorldFieldResolver.resolve("entitiesById").get(nmsWorld);
+			} else {
+				entitiesById = WorldServerFieldResolver.resolve("entitiesById").get(nmsWorld);
+			}
+
+			Object entity;
+			if (Minecraft.VERSION.olderThan(Minecraft.Version.v1_14_R1)) {// < 1.14 uses IntHashMap
+				if (IntHashMapMethodResolver == null) {
+					IntHashMapMethodResolver = new MethodResolver(nmsClassResolver.resolve("IntHashMap"));
+				}
+
+				entity = IntHashMapMethodResolver.resolve(new ResolverQuery("get", int.class)).invoke(entitiesById, entityId);
+			} else {// > 1.14 uses Int2ObjectMap which implements Map
+				entity = ((Map) entitiesById).get(entityId);
+			}
 			if (entity == null) { return null; }
 			return (Entity) EntityMethodResolver.resolve("getBukkitEntity").invoke(entity);
 		} catch (Exception e) {
