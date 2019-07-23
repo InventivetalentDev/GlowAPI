@@ -287,7 +287,8 @@ public class GlowAPI implements API, Listener {
 
 			//Existing values
 			Object dataWatcher = EntityMethodResolver.resolve("getDataWatcher").invoke(Minecraft.getHandle(entity));
-			Map<Integer, Object> dataWatcherItems = (Map<Integer, Object>) DataWatcherFieldResolver.resolveByLastType(Map.class).get(dataWatcher);
+			Class dataWatcherItemsType = Minecraft.VERSION.olderThan(Minecraft.Version.v1_14_R1) ? Map.class : Class.forName("it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap");
+			Map<Integer, Object> dataWatcherItems = (Map<Integer, Object>) DataWatcherFieldResolver.resolveByLastType(dataWatcherItemsType).get(dataWatcher);
 
 			//			Object dataWatcherObject = EntityFieldResolver.resolve("ax").get(null);//Byte-DataWatcherObject
 			Object dataWatcherObject = org.inventivetalent.reflection.minecraft.DataWatcher.V1_9.ValueType.ENTITY_FLAG.getType();
