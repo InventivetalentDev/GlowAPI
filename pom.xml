@@ -6,7 +6,7 @@
 
     <groupId>org.inventivetalent</groupId>
     <artifactId>glowapi</artifactId>
-    <version>1.4.9-SNAPSHOT</version>
+    <version>1.4.10-SNAPSHOT</version>
     <name>GlowAPI</name>
 
     <build>
