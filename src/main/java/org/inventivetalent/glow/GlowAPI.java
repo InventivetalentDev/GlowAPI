@@ -88,7 +88,7 @@ public class GlowAPI implements API, Listener {
 	 * Set the glowing-color of an entity
 	 *
 	 * @param entity        {@link Entity} to update
-	 * @param color         {@link org.inventivetalent.glow.GlowAPI.Color} of the glow, or <code>null</code> to stop glowing
+	 * @param color         {@link GlowAPI.Color} of the glow, or <code>null</code> to stop glowing
 	 * @param tagVisibility visibility of the name-tag (always, hideForOtherTeams, hideForOwnTeam, never)
 	 * @param push          push behaviour (always, pushOtherTeams, pushOwnTeam, never)
 	 * @param receiver      {@link Player} that will see the update
@@ -137,7 +137,7 @@ public class GlowAPI implements API, Listener {
 	 * Set the glowing-color of an entity
 	 *
 	 * @param entity   {@link Entity} to update
-	 * @param color    {@link org.inventivetalent.glow.GlowAPI.Color} of the glow, or <code>null</code> to stop glowing
+	 * @param color    {@link GlowAPI.Color} of the glow, or <code>null</code> to stop glowing
 	 * @param receiver {@link Player} that will see the update
 	 */
 	public static void setGlowing(Entity entity, Color color, Player receiver) {
@@ -174,7 +174,7 @@ public class GlowAPI implements API, Listener {
 	 * Set the glowing-color of an entity
 	 *
 	 * @param entity    {@link Entity} to update
-	 * @param color     {@link org.inventivetalent.glow.GlowAPI.Color} of the glow, or <code>null</code> to stop glowing
+	 * @param color     {@link GlowAPI.Color} of the glow, or <code>null</code> to stop glowing
 	 * @param receivers Collection of {@link Player}s that will see the update
 	 */
 	public static void setGlowing(Entity entity, Color color, Collection<? extends Player> receivers) {
@@ -187,7 +187,7 @@ public class GlowAPI implements API, Listener {
 	 * Set the glowing-color of an entity
 	 *
 	 * @param entities Collection of {@link Entity} to update
-	 * @param color    {@link org.inventivetalent.glow.GlowAPI.Color} of the glow, or <code>null</code> to stop glowing
+	 * @param color    {@link GlowAPI.Color} of the glow, or <code>null</code> to stop glowing
 	 * @param receiver {@link Player} that will see the update
 	 */
 	public static void setGlowing(Collection<? extends Entity> entities, Color color, Player receiver) {
@@ -200,7 +200,7 @@ public class GlowAPI implements API, Listener {
 	 * Set the glowing-color of an entity
 	 *
 	 * @param entities  Collection of {@link Entity} to update
-	 * @param color     {@link org.inventivetalent.glow.GlowAPI.Color} of the glow, or <code>null</code> to stop glowing
+	 * @param color     {@link GlowAPI.Color} of the glow, or <code>null</code> to stop glowing
 	 * @param receivers Collection of {@link Player}s that will see the update
 	 */
 	public static void setGlowing(Collection<? extends Entity> entities, Color color, Collection<? extends Player> receivers) {
@@ -250,7 +250,7 @@ public class GlowAPI implements API, Listener {
 	 *
 	 * @param entity   {@link Entity} to get the color for
 	 * @param receiver {@link Player} receiver of the color (as used in the setGlowing methods)
-	 * @return the {@link org.inventivetalent.glow.GlowAPI.Color}, or <code>null</code> if the entity doesn't appear glowing to the player
+	 * @return the {@link GlowAPI.Color}, or <code>null</code> if the entity doesn't appear glowing to the player
 	 */
 	public static Color getGlowColor(Entity entity, Player receiver) {
 		if (!dataMap.containsKey(entity.getUniqueId())) { return null; }

@@ -4,43 +4,55 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>org.inventivetalent</groupId>
-    <artifactId>glowapi</artifactId>
+    <groupId>org.inventivetalent.glow</groupId>
+    <artifactId>GlowAPI</artifactId>
     <version>1.4.11-SNAPSHOT</version>
+
     <name>GlowAPI</name>
+    <url>https://www.spigotmc.org/resources/api-glowapi.19422/</url>
+
+    <properties>
+        <!-- Removes warnings -->
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <!-- Used in plugin.yml -->
+        <mainClass>${project.groupId}.${project.artifactId}</mainClass>
+        <!-- Also used in plugin.yml -->
+        <author>inventivetalent</author>
+    </properties>
+
+    <issueManagement>
+        <system>GitHub</system>
+        <url>https://github.com/InventivetalentDev/GlowAPI/issues</url>
+    </issueManagement>
+
+    <scm>
+        <connection>scm:git:https://github.com/InventivetalentDev/GlowAPI.git</connection>
+        <url>https://github.com/InventivetalentDev/GlowAPI</url>
+    </scm>
 
     <build>
         <finalName>GlowAPI_v${project.version}</finalName>
-        <sourceDirectory>src</sourceDirectory>
+        <defaultGoal>clean package</defaultGoal>
         <resources>
             <resource>
-                <directory>src</directory>
-                <excludes>
-                    <exclude>**/*.java</exclude>
-                </excludes>
-            </resource>
-            <resource>
-                <directory>resources</directory>
+                <directory>src/main/resources</directory>
                 <filtering>true</filtering>
-                <includes>
-                    <include>plugin.yml</include>
-                    <include>config.yml</include>
-                </includes>
             </resource>
         </resources>
         <plugins>
             <plugin>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.3</version>
+                <version>3.8.1</version>
                 <configuration>
-                    <source>1.7</source>
-                    <target>1.7</target>
+                    <source>1.8</source>
+                    <target>1.8</target>
+                    <encoding>UTF-8</encoding>
                 </configuration>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
-                <version>2.4</version>
+                <version>3.2.1</version>
                 <executions>
                     <execution>
                         <phase>package</phase>
@@ -59,7 +71,7 @@
                             <relocations>
                                 <relocation>
                                     <pattern>org.bstats</pattern>
-                                    <shadedPattern>org.inventivetalent.glowapi</shadedPattern>
+                                    <shadedPattern>org.inventivetalent.glow</shadedPattern>
                                 </relocation>
                                 <relocation>
                                     <pattern>org.inventivetalent.reflection</pattern>
@@ -72,6 +84,7 @@
             </plugin>
         </plugins>
     </build>
+
     <distributionManagement>
         <repository>
             <id>sonatype-nexus-releases</id>
@@ -82,11 +95,12 @@
             <url>https://repo.inventivetalent.org/content/repositories/snapshots/</url>
         </snapshotRepository>
     </distributionManagement>
+
     <dependencies>
         <dependency>
             <groupId>org.spigotmc</groupId>
             <artifactId>spigot-api</artifactId>
-            <version>1.13-R0.1-SNAPSHOT</version>
+            <version>1.15.2-R0.1-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -102,12 +116,12 @@
         <dependency>
             <groupId>org.inventivetalent</groupId>
             <artifactId>apimanager</artifactId>
-            <version>[1.0.2,)</version>
+            <version>1.0.3-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>org.bstats</groupId>
             <artifactId>bstats-bukkit-lite</artifactId>
-            <version>1.2</version>
+            <version>1.7</version>
         </dependency>
     </dependencies>
 
@@ -117,28 +131,16 @@
             <url>https://repo.inventivetalent.org/content/groups/public/</url>
         </repository>
         <repository>
-            <id>md_5-repo</id>
-            <url>http://repo.md-5.net/content/repositories/public/</url>
-        </repository>
-        <repository>
             <id>sonatype</id>
-            <url>https://oss.sonatype.org/content/groups/public/</url>
+            <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
         </repository>
         <repository>
             <id>spigot-repo</id>
-            <url>https://hub.spigotmc.org/nexus/content/groups/public/</url>
+            <url>https://hub.spigotmc.org/nexus/content/repositories/snapshots/</url>
         </repository>
         <repository>
-            <id>sk89q-repo</id>
-            <url>http://maven.sk89q.com/artifactory/repo/</url>
-        </repository>
-        <repository>
-            <id>techcable-repo</id>
-            <url>http://repo.techcable.net/content/groups/public/</url>
-        </repository>
-        <repository>
-            <id>bstats-repo</id>
-            <url>http://repo.bstats.org/content/repositories/releases/</url>
+            <id>CodeMC</id>
+            <url>https://repo.codemc.org/repository/maven-public</url>
         </repository>
     </repositories>
 </project>
