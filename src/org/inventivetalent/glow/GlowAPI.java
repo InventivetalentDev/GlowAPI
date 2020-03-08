@@ -63,6 +63,17 @@ public class GlowAPI implements API, Listener {
 	private static FieldResolver  EntityPlayerFieldResolver;
 	private static MethodResolver PlayerConnectionMethodResolver;
 
+	static boolean isPaper = false;
+
+	static {
+		try {
+			Class.forName("com.destroystokyo.paper.PaperConfig");
+			isPaper = true;
+		} catch (Exception ignored) {
+			isPaper = false;
+		}
+	}
+
 	//Options
 	/**
 	 * Default name-tag visibility (always, hideForOtherTeams, hideForOwnTeam, never)
@@ -287,7 +298,7 @@ public class GlowAPI implements API, Listener {
 
 			//Existing values
 			Object dataWatcher = EntityMethodResolver.resolve("getDataWatcher").invoke(Minecraft.getHandle(entity));
-			Class dataWatcherItemsType = Minecraft.VERSION.olderThan(Minecraft.Version.v1_14_R1) ? Map.class : Class.forName("it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap");
+			Class dataWatcherItemsType = (!isPaper || Minecraft.VERSION.olderThan(Minecraft.Version.v1_14_R1)) ? Map.class : Class.forName("it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap");
 			Map<Integer, Object> dataWatcherItems = (Map<Integer, Object>) DataWatcherFieldResolver.resolveByLastType(dataWatcherItemsType).get(dataWatcher);
 
 			//			Object dataWatcherObject = EntityFieldResolver.resolve("ax").get(null);//Byte-DataWatcherObject
