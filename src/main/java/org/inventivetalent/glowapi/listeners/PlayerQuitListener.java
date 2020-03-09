@@ -1,4 +1,4 @@
-package org.inventivetalent.glow.listeners;
+package org.inventivetalent.glowapi.listeners;
 
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -6,7 +6,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerQuitEvent;
-import org.inventivetalent.glow.GlowAPI;
+import org.inventivetalent.glowapi.GlowAPI;
 
 public class PlayerQuitListener implements Listener {
 

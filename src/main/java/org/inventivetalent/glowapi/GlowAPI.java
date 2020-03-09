@@ -1,4 +1,4 @@
-package org.inventivetalent.glow;
+package org.inventivetalent.glowapi;
 
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.ProtocolLibrary;
@@ -16,10 +16,10 @@ import org.bukkit.World;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.inventivetalent.glow.listeners.PlayerJoinListener;
-import org.inventivetalent.glow.listeners.PlayerQuitListener;
-import org.inventivetalent.glow.packetwrapper.WrapperPlayServerEntityMetadata;
-import org.inventivetalent.glow.packetwrapper.WrapperPlayServerScoreboardTeam;
+import org.inventivetalent.glowapi.listeners.PlayerJoinListener;
+import org.inventivetalent.glowapi.listeners.PlayerQuitListener;
+import org.inventivetalent.glowapi.packetwrapper.WrapperPlayServerEntityMetadata;
+import org.inventivetalent.glowapi.packetwrapper.WrapperPlayServerScoreboardTeam;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.*;

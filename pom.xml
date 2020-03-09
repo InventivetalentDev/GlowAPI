@@ -4,7 +4,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>org.inventivetalent.glow</groupId>
+    <groupId>org.inventivetalent.glowapi</groupId>
     <artifactId>GlowAPI</artifactId>
     <version>2.0.0-SNAPSHOT</version>
 
@@ -76,7 +76,7 @@
                                 </relocation>
                                 <relocation>
                                     <pattern>org.inventivetalent.reflection</pattern>
-                                    <shadedPattern>org.inventivetalent.glow.reflection</shadedPattern>
+                                    <shadedPattern>org.inventivetalent.glowapi.reflection</shadedPattern>
                                 </relocation>
                             </relocations>
                         </configuration>
