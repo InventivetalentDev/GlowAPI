@@ -1,14 +1,9 @@
 package org.inventivetalent.glow;
 
-import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.World;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.Listener;
-import org.bukkit.event.player.PlayerJoinEvent;
-import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.Plugin;
 import org.inventivetalent.packetlistener.handler.PacketHandler;
 import org.inventivetalent.packetlistener.handler.PacketOptions;
@@ -25,7 +20,7 @@ import org.inventivetalent.reflection.resolver.minecraft.OBCClassResolver;
 import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 
-public class GlowAPI implements Listener {
+public class GlowAPI {
 
 	private static Map<UUID, GlowData> dataMap = new HashMap<>();
 
@@ -507,21 +502,6 @@ public class GlowAPI implements Listener {
 			public void onReceive(ReceivedPacket receivedPacket) {
 			}
 		});
-	}
-
-	@EventHandler
-	public void onJoin(final PlayerJoinEvent event) {
-		//Initialize the teams
-		GlowAPI.initTeam(event.getPlayer());
-	}
-
-	@EventHandler
-	public void onQuit(final PlayerQuitEvent event) {
-		for (Player receiver : Bukkit.getOnlinePlayers()) {
-			if (GlowAPI.isGlowing(event.getPlayer(), receiver)) {
-				GlowAPI.setGlowing(event.getPlayer(), null, receiver);
-			}
-		}
 	}
 
 	protected static NMSClassResolver nmsClassResolver = new NMSClassResolver();
