@@ -1,60 +1,44 @@
 package org.inventivetalent.glow;
 
+import com.comphenix.protocol.PacketType;
+import com.comphenix.protocol.ProtocolLibrary;
+import com.comphenix.protocol.ProtocolManager;
+import com.comphenix.protocol.events.ListenerPriority;
+import com.comphenix.protocol.events.PacketAdapter;
+import com.comphenix.protocol.events.PacketContainer;
+import com.comphenix.protocol.events.PacketEvent;
+import com.comphenix.protocol.wrappers.WrappedDataWatcher;
+import com.comphenix.protocol.wrappers.WrappedWatchableObject;
+import org.bstats.bukkit.MetricsLite;
+import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.World;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
-import org.bukkit.plugin.Plugin;
-import org.inventivetalent.packetlistener.handler.PacketHandler;
-import org.inventivetalent.packetlistener.handler.PacketOptions;
-import org.inventivetalent.packetlistener.handler.ReceivedPacket;
-import org.inventivetalent.packetlistener.handler.SentPacket;
-import org.inventivetalent.reflection.minecraft.Minecraft;
-import org.inventivetalent.reflection.resolver.ConstructorResolver;
-import org.inventivetalent.reflection.resolver.FieldResolver;
-import org.inventivetalent.reflection.resolver.MethodResolver;
-import org.inventivetalent.reflection.resolver.ResolverQuery;
-import org.inventivetalent.reflection.resolver.minecraft.NMSClassResolver;
-import org.inventivetalent.reflection.resolver.minecraft.OBCClassResolver;
+import org.bukkit.plugin.java.JavaPlugin;
+import org.inventivetalent.glow.listeners.PlayerJoinListener;
+import org.inventivetalent.glow.listeners.PlayerQuitListener;
+import org.inventivetalent.glow.packetwrapper.WrapperPlayServerEntityMetadata;
+import org.inventivetalent.glow.packetwrapper.WrapperPlayServerScoreboardTeam;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 
-public class GlowAPI {
+public class GlowAPI extends JavaPlugin {
+
+	// From https://wiki.vg/Entity_metadata#Entity
+	public static final byte ENTITY_ON_FIRE            = (byte) 0x01;
+	public static final byte ENTITY_CROUCHED           = (byte) 0x02;
+	public static final byte ENTITY_RIDING             = (byte) 0x04; // UNUSED
+	public static final byte ENTITY_SPRINTING          = (byte) 0x08;
+	public static final byte ENTITY_SWIMMING           = (byte) 0x10;
+	public static final byte ENTITY_INVISIBLE          = (byte) 0x20;
+	public static final byte ENTITY_GLOWING_EFFECT     = (byte) 0x40;
+	public static final byte ENTITY_FLYING_WITH_ELYTRA = (byte) 0x80;
+
+	public static final int MAX_TEAM_NAME_LENGTH = 16;
 
 	private static Map<UUID, GlowData> dataMap = new HashMap<>();
-
-	private static final NMSClassResolver NMS_CLASS_RESOLVER = new NMSClassResolver();
-
-	//Metadata
-	private static Class<?> PacketPlayOutEntityMetadata;
-	static         Class<?> DataWatcher;
-	static         Class<?> DataWatcherItem;
-	private static Class<?> Entity;
-
-	private static FieldResolver PacketPlayOutMetadataFieldResolver;
-	private static FieldResolver EntityFieldResolver;
-	private static FieldResolver DataWatcherFieldResolver;
-	static         FieldResolver DataWatcherItemFieldResolver;
-
-	private static ConstructorResolver DataWatcherItemConstructorResolver;
-
-	private static MethodResolver DataWatcherMethodResolver;
-	static         MethodResolver DataWatcherItemMethodResolver;
-	private static MethodResolver EntityMethodResolver;
-
-	//Scoreboard
-	private static Class<?> PacketPlayOutScoreboardTeam;
-
-	private static FieldResolver PacketScoreboardTeamFieldResolver;
-
-	private static ConstructorResolver ChatComponentTextResolver;
-	private static MethodResolver EnumChatFormatResolver;
-
-	//Packets
-	private static FieldResolver  EntityPlayerFieldResolver;
-	private static MethodResolver PlayerConnectionMethodResolver;
-
 	static boolean isPaper = false;
 
 	static {
@@ -75,6 +59,59 @@ public class GlowAPI {
 	 * Default push behaviour (always, pushOtherTeams, pushOwnTeam, never)
 	 */
 	public static String TEAM_PUSH           = "always";
+
+	public static GlowAPI getPlugin() {
+		return getPlugin(GlowAPI.class);
+	}
+
+	@Override
+	public void onEnable() {
+		new MetricsLite(this, 2190);
+
+		Bukkit.getPluginManager().registerEvents(new PlayerJoinListener(), this);
+		Bukkit.getPluginManager().registerEvents(new PlayerQuitListener(), this);
+
+		ProtocolManager protocolManager = ProtocolLibrary.getProtocolManager();
+		protocolManager.addPacketListener(new PacketAdapter(this, ListenerPriority.NORMAL, PacketType.Play.Server.ENTITY_METADATA) {
+
+			@Override
+			public void onPacketSending(PacketEvent event) {
+				PacketContainer packet = event.getPacket();
+				WrapperPlayServerEntityMetadata wrappedPacket = new WrapperPlayServerEntityMetadata(packet);
+
+				final int entityId = wrappedPacket.getEntityID();
+				if (entityId < 0) {//Our packet
+					//Reset the ID and let it through
+					wrappedPacket.setEntityID(-entityId);
+					return;
+				}
+
+				final List<WrappedWatchableObject> metaData = wrappedPacket.getMetadata();
+				if (metaData == null || metaData.isEmpty()) return;//Nothing to modify
+
+				Player player = event.getPlayer();
+
+				Entity entity = getEntityById(player.getWorld(), entityId);
+				if (entity == null) return;
+
+				//Check if the entity is glowing
+				if (!GlowAPI.isGlowing(entity, player)) return;
+
+				//Update the DataWatcher Item
+				//Object prevItem = b.get(0);
+				for (WrappedWatchableObject prevItem : metaData) {
+					Object prevObj = prevItem.getValue();
+					if (prevObj instanceof Byte) {
+						byte prev = (byte) prevObj;
+						/*Maybe use the isGlowing result*/
+						byte bte = (byte) ((prev | ENTITY_GLOWING_EFFECT));
+						prevItem.setValue(bte);
+					}
+				}
+			}
+
+		});
+	}
 
 	/**
 	 * Set the glowing-color of an entity
@@ -251,65 +288,33 @@ public class GlowAPI {
 	}
 
 	protected static void sendGlowPacket(Entity entity, boolean wasGlowing, boolean glowing, Player receiver) {
+		final PacketContainer packet = new PacketContainer(PacketType.Play.Server.ENTITY_METADATA);
+		final WrapperPlayServerEntityMetadata wrappedPacket = new WrapperPlayServerEntityMetadata(packet);
+		final WrappedDataWatcher.WrappedDataWatcherObject dataWatcherObject = new WrappedDataWatcher.WrappedDataWatcherObject(0, WrappedDataWatcher.Registry.get(Byte.class));
+
+		final int invertedEntityId = -entity.getEntityId();
+
+		byte entityByte = 0x00;
+		if (entity.getFireTicks() != 0) entityByte = (byte) (entityByte | ENTITY_ON_FIRE);
+		// if () entityByte = (byte) (entityByte | ENTITY_CROUCHED)
+		if (entity.isInsideVehicle()) entityByte = (byte) (entityByte | ENTITY_RIDING);
+		// if () entityByte = (byte) (entityByte | ENTITY_SPRINTING)
+		// if () entityByte = (byte) (entityByte | ENTITY_SWIMMING)
+		// if () entityByte = (byte) (entityByte | ENTITY_INVISIBLE)
+		if (glowing) entityByte = (byte) (entityByte | ENTITY_GLOWING_EFFECT);
+		// if () entityByte = (byte) (entityByte | ENTITY_FLYING_WITH_ELYTRA)
+
+		final WrappedWatchableObject wrappedMetadata = new WrappedWatchableObject(dataWatcherObject, entityByte);
+		final List<WrappedWatchableObject> metadata = Collections.singletonList(wrappedMetadata);
+
+		wrappedPacket.setEntityID(invertedEntityId);
+		wrappedPacket.setMetadata(metadata);
+
+		final ProtocolManager protocolManager = ProtocolLibrary.getProtocolManager();
 		try {
-			if (PacketPlayOutEntityMetadata == null) {
-				PacketPlayOutEntityMetadata = NMS_CLASS_RESOLVER.resolve("PacketPlayOutEntityMetadata");
-			}
-			if (DataWatcher == null) {
-				DataWatcher = NMS_CLASS_RESOLVER.resolve("DataWatcher");
-			}
-			if (DataWatcherItem == null) {
-				DataWatcherItem = NMS_CLASS_RESOLVER.resolve("DataWatcher$Item");
-			}
-			if (Entity == null) {
-				Entity = NMS_CLASS_RESOLVER.resolve("Entity");
-			}
-			if (PacketPlayOutMetadataFieldResolver == null) {
-				PacketPlayOutMetadataFieldResolver = new FieldResolver(PacketPlayOutEntityMetadata);
-			}
-			if (DataWatcherItemConstructorResolver == null) {
-				DataWatcherItemConstructorResolver = new ConstructorResolver(DataWatcherItem);
-			}
-			if (EntityFieldResolver == null) {
-				EntityFieldResolver = new FieldResolver(Entity);
-			}
-			if (DataWatcherMethodResolver == null) {
-				DataWatcherMethodResolver = new MethodResolver(DataWatcher);
-			}
-			if (DataWatcherItemMethodResolver == null) {
-				DataWatcherItemMethodResolver = new MethodResolver(DataWatcherItem);
-			}
-			if (EntityMethodResolver == null) {
-				EntityMethodResolver = new MethodResolver(Entity);
-			}
-			if (DataWatcherFieldResolver == null) {
-				DataWatcherFieldResolver = new FieldResolver(DataWatcher);
-			}
-
-			List list = new ArrayList();
-
-			//Existing values
-			Object dataWatcher = EntityMethodResolver.resolve("getDataWatcher").invoke(Minecraft.getHandle(entity));
-			Class dataWatcherItemsType = Minecraft.VERSION.olderThan(Minecraft.Version.v1_14_R1) ? Map.class :
-					isPaper ? Class.forName("it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap") : Class.forName("org.bukkit.craftbukkit.libs.it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap");
-			Map<Integer, Object> dataWatcherItems = (Map<Integer, Object>) DataWatcherFieldResolver.resolveByLastType(dataWatcherItemsType).get(dataWatcher);
-
-			//			Object dataWatcherObject = EntityFieldResolver.resolve("ax").get(null);//Byte-DataWatcherObject
-			Object dataWatcherObject = org.inventivetalent.reflection.minecraft.DataWatcher.V1_9.ValueType.ENTITY_FLAG.getType();
-			byte prev = (byte) (dataWatcherItems.isEmpty() ? 0 : DataWatcherItemMethodResolver.resolve("b").invoke(dataWatcherItems.get(0)));
-			byte b = (byte) (glowing ? (prev | 1 << 6) : (prev & ~(1 << 6)));//6 = glowing index
-			Object dataWatcherItem = DataWatcherItemConstructorResolver.resolveFirstConstructor().newInstance(dataWatcherObject, b);
-
-			//The glowing item
-			list.add(dataWatcherItem);
-
-			Object packetMetadata = PacketPlayOutEntityMetadata.newInstance();
-			PacketPlayOutMetadataFieldResolver.resolve("a").set(packetMetadata, -entity.getEntityId());//Use the negative ID so we can identify our own packet
-			PacketPlayOutMetadataFieldResolver.resolve("b").set(packetMetadata, list);
-
-			sendPacket(packetMetadata, receiver);
-		} catch (ReflectiveOperationException e) {
-			throw new RuntimeException(e);
+			protocolManager.sendServerPacket(receiver, packet);
+		} catch (InvocationTargetException e) {
+			throw new RuntimeException("Unable to send packet " + packet.toString() + " to player " + receiver.toString(), e);
 		}
 	}
 
@@ -335,67 +340,48 @@ public class GlowAPI {
 		initTeam(receiver, TEAM_TAG_VISIBILITY, TEAM_PUSH);
 	}
 
-	protected static void sendTeamPacket(Entity entity, Color color, boolean createNewTeam/*If true, we don't add any entities*/, boolean addEntity/*true->add the entity, false->remove the entity*/, String tagVisibility, String push, Player receiver) {
+	/**
+	 *
+	 * @param entity
+	 * @param color
+	 * @param createNewTeam - If true, we don't add any entities
+	 * @param addEntity - true->add the entity, false->remove the entity
+	 * @param tagVisibility
+	 * @param push
+	 * @param receiver
+	 */
+	protected static void sendTeamPacket(Entity entity, Color color, boolean createNewTeam, boolean addEntity, String tagVisibility, String push, Player receiver) {
+		final PacketContainer packet = new PacketContainer(PacketType.Play.Server.SCOREBOARD_TEAM);
+		final WrapperPlayServerScoreboardTeam wrappedPacket = new WrapperPlayServerScoreboardTeam(packet);
+
+		//Mode (0 = create, 3 = add entity, 4 = remove entity)
+		final byte packetMode = (byte) (createNewTeam ? 0 : (addEntity ? 3 : 4));
+		final String teamName = color.getTeamName();
+
+		wrappedPacket.setPacketMode(packetMode);
+		wrappedPacket.setTeamName(teamName);
+
+		if (createNewTeam) {
+			wrappedPacket.setTeamPrefix("§" + color.colorCode);
+			wrappedPacket.setTeamDisplayName(teamName);
+			wrappedPacket.setTeamSuffix("");
+		} else {
+			//Add/remove players
+			String entry;
+			if (entity instanceof OfflinePlayer) {//Players still use the name...
+				entry = entity.getName();
+			} else {
+				entry = entity.getUniqueId().toString();
+			}
+			Collection<String> players = wrappedPacket.getPlayers();
+			players.add(entry);
+		}
+
+		final ProtocolManager protocolManager = ProtocolLibrary.getProtocolManager();
 		try {
-			if (PacketPlayOutScoreboardTeam == null) {
-				PacketPlayOutScoreboardTeam = NMS_CLASS_RESOLVER.resolve("PacketPlayOutScoreboardTeam");
-			}
-			if (PacketScoreboardTeamFieldResolver == null) {
-				PacketScoreboardTeamFieldResolver = new FieldResolver(PacketPlayOutScoreboardTeam);
-			}
-			if(ChatComponentTextResolver == null) {
-				ChatComponentTextResolver = new ConstructorResolver(NMS_CLASS_RESOLVER.resolve("ChatComponentText"));
-			}
-
-			Object packetScoreboardTeam = PacketPlayOutScoreboardTeam.newInstance();
-			PacketScoreboardTeamFieldResolver.resolve("i").set(packetScoreboardTeam, createNewTeam ? 0 : addEntity ? 3 : 4);//Mode (0 = create, 3 = add entity, 4 = remove entity)
-			PacketScoreboardTeamFieldResolver.resolve("a").set(packetScoreboardTeam, color.getTeamName());//Name
-			PacketScoreboardTeamFieldResolver.resolve("e").set(packetScoreboardTeam, tagVisibility);//NameTag visibility
-			PacketScoreboardTeamFieldResolver.resolve("f").set(packetScoreboardTeam, push);//Team-push
-
-			if (createNewTeam) {
-				PacketScoreboardTeamFieldResolver.resolve("g").set(packetScoreboardTeam, color.packetValue);//Color -> this is what we care about
-
-				Object prefix = ChatComponentTextResolver.resolveFirstConstructor().newInstance("§" + color.colorCode);
-				Object displayName = ChatComponentTextResolver.resolveFirstConstructor().newInstance(color.getTeamName());
-				Object suffix = ChatComponentTextResolver.resolveFirstConstructor().newInstance("");
-
-				PacketScoreboardTeamFieldResolver.resolve("c").set(packetScoreboardTeam, prefix);//prefix - for some reason this controls the color, even though there's the extra color value...
-				PacketScoreboardTeamFieldResolver.resolve("b").set(packetScoreboardTeam, displayName);//Display name
-				PacketScoreboardTeamFieldResolver.resolve("d").set(packetScoreboardTeam, suffix);//suffix
-				PacketScoreboardTeamFieldResolver.resolve("j").set(packetScoreboardTeam, 0);//Options - let's just ignore them for now
-			}
-
-			if (!createNewTeam) {
-				//Add/remove players
-				Collection<String> collection = ((Collection<String>) PacketScoreboardTeamFieldResolver.resolve("h").get(packetScoreboardTeam));
-				if (entity instanceof OfflinePlayer) {//Players still use the name...
-					collection.add(entity.getName());
-				} else {
-					collection.add(entity.getUniqueId().toString());
-				}
-			}
-
-			sendPacket(packetScoreboardTeam, receiver);
-		} catch (ReflectiveOperationException e) {
-			throw new RuntimeException(e);
-		}
-	}
-
-	protected static void sendPacket(Object packet, Player p) throws IllegalArgumentException, IllegalAccessException, InvocationTargetException, ClassNotFoundException, NoSuchFieldException, NoSuchMethodException {
-		if (EntityPlayerFieldResolver == null) {
-			EntityPlayerFieldResolver = new FieldResolver(NMS_CLASS_RESOLVER.resolve("EntityPlayer"));
-		}
-		if (PlayerConnectionMethodResolver == null) {
-			PlayerConnectionMethodResolver = new MethodResolver(NMS_CLASS_RESOLVER.resolve("PlayerConnection"));
-		}
-
-		try {
-			Object handle = Minecraft.getHandle(p);
-			final Object connection = EntityPlayerFieldResolver.resolve("playerConnection").get(handle);
-			PlayerConnectionMethodResolver.resolve("sendPacket").invoke(connection, packet);
-		} catch (ReflectiveOperationException e) {
-			throw new RuntimeException(e);
+			protocolManager.sendServerPacket(receiver, packet);
+		} catch (InvocationTargetException e) {
+			throw new RuntimeException("Unable to send packet " + packet.toString() + " to player " + receiver.toString(), e);
 		}
 	}
 
@@ -404,154 +390,45 @@ public class GlowAPI {
 	 */
 	public enum Color {
 
-		BLACK(0, "0"),
-		DARK_BLUE(1, "1"),
-		DARK_GREEN(2, "2"),
-		DARK_AQUA(3, "3"),
-		DARK_RED(4, "4"),
-		DARK_PURPLE(5, "5"),
-		GOLD(6, "6"),
-		GRAY(7, "7"),
-		DARK_GRAY(8, "8"),
-		BLUE(9, "9"),
-		GREEN(10, "a"),
-		AQUA(11, "b"),
-		RED(12, "c"),
-		PURPLE(13, "d"),
-		YELLOW(14, "e"),
-		WHITE(15, "f"),
-		NONE(-1, "");
+		BLACK("0"),
+		DARK_BLUE("1"),
+		DARK_GREEN("2"),
+		DARK_AQUA("3"),
+		DARK_RED("4"),
+		DARK_PURPLE("5"),
+		GOLD("6"),
+		GRAY("7"),
+		DARK_GRAY("8"),
+		BLUE("9"),
+		GREEN("a"),
+		AQUA("b"),
+		RED("c"),
+		PURPLE("d"),
+		YELLOW("e"),
+		WHITE("f"),
+		NONE("");
 
-		Object packetValue;
 		String colorCode;
 
-		Color(int packetValue, String colorCode) {
-			try {
-				if(EnumChatFormatResolver == null) {
-					EnumChatFormatResolver = new MethodResolver(NMS_CLASS_RESOLVER.resolve("EnumChatFormat"));
-				}
-
-				this.packetValue = EnumChatFormatResolver.resolve(new ResolverQuery("a", int.class)).invoke(null, packetValue);
-			}
-			catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException | NoSuchMethodException | ClassNotFoundException e) {
-				e.printStackTrace();
-			}
-
+		Color(String colorCode) {
 			this.colorCode = colorCode;
 		}
 
 		String getTeamName() {
 			String name = String.format("GAPI#%s", name());
-			if (name.length() > 16) {
-				name = name.substring(0, 16);
+			if (name.length() > MAX_TEAM_NAME_LENGTH) {
+				name = name.substring(0, MAX_TEAM_NAME_LENGTH);
 			}
 			return name;
 		}
 	}
 
-	//This gets called either by #initAPI above or #initAPI in one of the requiring plugins
-	public void init(Plugin plugin) {
-		PacketHandler.addHandler(new PacketHandler(plugin) {
-			@Override
-			@PacketOptions(forcePlayer = true)
-			public void onSend(SentPacket sentPacket) {
-				if ("PacketPlayOutEntityMetadata".equals(sentPacket.getPacketName())) {
-					int a = (int) sentPacket.getPacketValue("a");
-					if (a < 0) {//Our packet
-						//Reset the ID and let it through
-						sentPacket.setPacketValue("a", -a);
-						return;
-					}
-
-					List b = (List) sentPacket.getPacketValue("b");
-					if (b == null || b.isEmpty()) {
-						return;//Nothing to modify
-					}
-
-					Entity entity = getEntityById(sentPacket.getPlayer().getWorld(), a);
-					if (entity != null) {
-						//Check if the entity is glowing
-						if (GlowAPI.isGlowing(entity, sentPacket.getPlayer())) {
-							if (GlowAPI.DataWatcherItemMethodResolver == null) {
-								GlowAPI.DataWatcherItemMethodResolver = new MethodResolver(GlowAPI.DataWatcherItem);
-							}
-							if (GlowAPI.DataWatcherItemFieldResolver == null) {
-								GlowAPI.DataWatcherItemFieldResolver = new FieldResolver(GlowAPI.DataWatcherItem);
-							}
-
-							try {
-								//Update the DataWatcher Item
-								//								Object prevItem = b.get(0);
-								for (Object prevItem : b) {
-									Object prevObj = GlowAPI.DataWatcherItemMethodResolver.resolve("b").invoke(prevItem);
-									if (prevObj instanceof Byte) {
-										byte prev = (byte) prevObj;
-										byte bte = (byte) (true/*Maybe use the isGlowing result*/ ? (prev | 1 << 6) : (prev & ~(1 << 6)));//6 = glowing index
-										GlowAPI.DataWatcherItemFieldResolver.resolve("b").set(prevItem, bte);
-									}
-								}
-							} catch (Exception e) {
-								throw new RuntimeException(e);
-							}
-						}
-					}
-				}
-			}
-
-			@Override
-			public void onReceive(ReceivedPacket receivedPacket) {
-			}
-		});
-	}
-
-	protected static NMSClassResolver nmsClassResolver = new NMSClassResolver();
-	protected static OBCClassResolver obcClassResolver = new OBCClassResolver();
-
-	private static FieldResolver  CraftWorldFieldResolver;
-	private static FieldResolver  WorldFieldResolver;
-	private static FieldResolver  WorldServerFieldResolver;
-	private static MethodResolver IntHashMapMethodResolver;
-
 	public static Entity getEntityById(World world, int entityId) {
-		try {
-			if (CraftWorldFieldResolver == null) {
-				CraftWorldFieldResolver = new FieldResolver(obcClassResolver.resolve("CraftWorld"));
-			}
-			if (WorldFieldResolver == null) {
-				WorldFieldResolver = new FieldResolver(nmsClassResolver.resolve("World"));
-			}
-			if (WorldServerFieldResolver == null) {
-				WorldServerFieldResolver = new FieldResolver(nmsClassResolver.resolve("WorldServer"));
-			}
-			if (EntityMethodResolver == null) {
-				EntityMethodResolver = new MethodResolver(nmsClassResolver.resolve("Entity"));
-			}
-
-			Object nmsWorld = CraftWorldFieldResolver.resolve("world").get(world);
-			Object entitiesById;
-			// NOTE: this check can be false, if the v1_14_R1 doesn't exist (stupid java), i.e. in old ReflectionHelper versions
-			if (Minecraft.VERSION.newerThan(Minecraft.Version.v1_8_R1)
-					&& Minecraft.VERSION.olderThan(Minecraft.Version.v1_14_R1)) { /* seriously?! between 1.8 and 1.14 entitiesyId was moved to World */
-				entitiesById = WorldFieldResolver.resolve("entitiesById").get(nmsWorld);
-			} else {
-				entitiesById = WorldServerFieldResolver.resolve("entitiesById").get(nmsWorld);
-			}
-
-			Object entity;
-			if (Minecraft.VERSION.olderThan(Minecraft.Version.v1_14_R1)) {// < 1.14 uses IntHashMap
-				if (IntHashMapMethodResolver == null) {
-					IntHashMapMethodResolver = new MethodResolver(nmsClassResolver.resolve("IntHashMap"));
-				}
-
-				entity = IntHashMapMethodResolver.resolve(new ResolverQuery("get", int.class)).invoke(entitiesById, entityId);
-			} else {// > 1.14 uses Int2ObjectMap which implements Map
-				entity = ((Map) entitiesById).get(entityId);
-			}
-			if (entity == null) { return null; }
-			return (Entity) EntityMethodResolver.resolve("getBukkitEntity").invoke(entity);
-		} catch (Exception e) {
-			throw new RuntimeException(e);
+		for (Entity entity : world.getEntities()) {
+			if (entity.getEntityId() != entityId) continue;
+			return entity;
 		}
+		return null;
 	}
 
 }

@@ -2,7 +2,7 @@ name: ${project.name}
 version: ${project.version}
 description: ${project.description}
 author: ${author}
-depend: [PacketListenerApi]
+depend: [ProtocolLib]
 api-version: 1.14
 
 main: ${mainClass}
