@@ -9,13 +9,14 @@
     <version>1.4.11-SNAPSHOT</version>
 
     <name>GlowAPI</name>
+    <description>This API allows you to change the glow-color of entities and players.</description>
     <url>https://www.spigotmc.org/resources/api-glowapi.19422/</url>
 
     <properties>
         <!-- Removes warnings -->
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!-- Used in plugin.yml -->
-        <mainClass>${project.groupId}.${project.artifactId}</mainClass>
+        <mainClass>${project.groupId}.GlowPlugin</mainClass>
         <!-- Also used in plugin.yml -->
         <author>inventivetalent</author>
     </properties>
