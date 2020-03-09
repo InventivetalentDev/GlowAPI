@@ -3,4 +3,4 @@ main: org.inventivetalent.glow.GlowPlugin
 author: inventivetalent
 version: ${project.version}
 
-softdepend: [PacketListenerApi]
+depend: [PacketListenerApi]
