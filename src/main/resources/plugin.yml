@@ -1,6 +1,8 @@
-name: GlowAPI
-main: org.inventivetalent.glow.GlowPlugin
-author: inventivetalent
+name: ${project.name}
 version: ${project.version}
+description: ${project.description}
+author: ${author}
+depend: [ProtocolLib]
+api-version: 1.14
 
-depend: [PacketListenerApi]
+main: ${mainClass}
