@@ -10,9 +10,6 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.Plugin;
-import org.inventivetalent.apihelper.API;
-import org.inventivetalent.apihelper.APIManager;
-import org.inventivetalent.packetlistener.PacketListenerAPI;
 import org.inventivetalent.packetlistener.handler.PacketHandler;
 import org.inventivetalent.packetlistener.handler.PacketOptions;
 import org.inventivetalent.packetlistener.handler.ReceivedPacket;
@@ -28,7 +25,7 @@ import org.inventivetalent.reflection.resolver.minecraft.OBCClassResolver;
 import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 
-public class GlowAPI implements API, Listener {
+public class GlowAPI implements Listener {
 
 	private static Map<UUID, GlowData> dataMap = new HashMap<>();
 
@@ -457,23 +454,9 @@ public class GlowAPI implements API, Listener {
 		}
 	}
 
-	//This gets called either by #registerAPI above, or by the API manager if another plugin requires this API
-	@Override
-	public void load() {
-		//Require PacketListenerAPI
-		APIManager.require(PacketListenerAPI.class, GlowPlugin.instance);
-	}
-
 	//This gets called either by #initAPI above or #initAPI in one of the requiring plugins
-	@Override
 	public void init(Plugin plugin) {
-		//Initialize other APIs we need
-		APIManager.initAPI(PacketListenerAPI.class);
-
-		//Register our events
-		APIManager.registerEvents(this, this);
-
-		PacketHandler.addHandler(new PacketHandler(GlowPlugin.instance != null ? GlowPlugin.instance : plugin) {
+		PacketHandler.addHandler(new PacketHandler(plugin) {
 			@Override
 			@PacketOptions(forcePlayer = true)
 			public void onSend(SentPacket sentPacket) {
@@ -524,10 +507,6 @@ public class GlowAPI implements API, Listener {
 			public void onReceive(ReceivedPacket receivedPacket) {
 			}
 		});
-	}
-
-	@Override
-	public void disable(Plugin plugin) {
 	}
 
 	@EventHandler
@@ -593,9 +572,6 @@ public class GlowAPI implements API, Listener {
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
-	}
-
-	public GlowAPI() {
 	}
 
 }
