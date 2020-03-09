@@ -22,6 +22,8 @@ import java.util.Collection;
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.reflect.IntEnum;
+import com.comphenix.protocol.utility.MinecraftReflection;
+import org.bukkit.ChatColor;
 
 public class WrapperPlayServerScoreboardTeam extends AbstractPacket {
     public static final PacketType TYPE = PacketType.Play.Server.SCOREBOARD_TEAM;
@@ -199,5 +201,13 @@ public class WrapperPlayServerScoreboardTeam extends AbstractPacket {
     */
     public void setPlayers(Collection<String> players) {
     	handle.getSpecificModifier(Collection.class).write(0, players);
+    }
+
+    public ChatColor getTeamColor() {
+        return handle.getEnumModifier(ChatColor.class, MinecraftReflection.getMinecraftClass("EnumChatFormat")).read(0);
+    }
+
+    public void setTeamColor(ChatColor value) {
+        handle.getEnumModifier(ChatColor.class, MinecraftReflection.getMinecraftClass("EnumChatFormat")).write(0, value);
     }
 }

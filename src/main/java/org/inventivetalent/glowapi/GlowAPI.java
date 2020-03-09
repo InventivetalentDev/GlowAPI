@@ -7,10 +7,12 @@ import com.comphenix.protocol.events.ListenerPriority;
 import com.comphenix.protocol.events.PacketAdapter;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.events.PacketEvent;
+import com.comphenix.protocol.utility.MinecraftReflection;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher;
 import com.comphenix.protocol.wrappers.WrappedWatchableObject;
 import org.bstats.bukkit.MetricsLite;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.World;
 import org.bukkit.entity.Entity;
@@ -36,8 +38,6 @@ public class GlowAPI extends JavaPlugin {
 	public static final byte ENTITY_GLOWING_EFFECT     = (byte) 0x40;
 	public static final byte ENTITY_FLYING_WITH_ELYTRA = (byte) 0x80;
 
-	public static final int MAX_TEAM_NAME_LENGTH = 16;
-
 	private static Map<UUID, GlowData> dataMap = new HashMap<>();
 	static boolean isPaper = false;
 
@@ -59,6 +59,46 @@ public class GlowAPI extends JavaPlugin {
 	 * Default push behaviour (always, pushOtherTeams, pushOwnTeam, never)
 	 */
 	public static String TEAM_PUSH           = "always";
+
+	/**
+	 * Team Colors
+	 */
+	public enum Color {
+
+		BLACK(ChatColor.BLACK, "0"),
+		DARK_BLUE(ChatColor.DARK_BLUE, "1"),
+		DARK_GREEN(ChatColor.DARK_GREEN, "2"),
+		DARK_AQUA(ChatColor.DARK_AQUA, "3"),
+		DARK_RED(ChatColor.RED, "4"),
+		DARK_PURPLE(ChatColor.DARK_PURPLE, "5"),
+		GOLD(ChatColor.GOLD, "6"),
+		GRAY(ChatColor.GRAY, "7"),
+		DARK_GRAY(ChatColor.DARK_GRAY, "8"),
+		BLUE(ChatColor.BLUE, "9"),
+		GREEN(ChatColor.GREEN, "a"),
+		AQUA(ChatColor.AQUA, "b"),
+		RED(ChatColor.RED, "c"),
+		PURPLE(ChatColor.LIGHT_PURPLE, "d"),
+		YELLOW(ChatColor.YELLOW, "e"),
+		WHITE(ChatColor.WHITE, "f"),
+		NONE(ChatColor.RESET, "");
+
+		ChatColor packetValue;
+		String colorCode;
+
+		Color(ChatColor packetValue, String colorCode) {
+			this.packetValue = packetValue;
+			this.colorCode = colorCode;
+		}
+
+		String getTeamName() {
+			String name = String.format("GAPI#%s", name());
+			if (name.length() > 16) {
+				name = name.substring(0, 16);
+			}
+			return name;
+		}
+	}
 
 	public static GlowAPI getPlugin() {
 		return getPlugin(GlowAPI.class);
@@ -122,18 +162,20 @@ public class GlowAPI extends JavaPlugin {
 	 * @param push          push behaviour (always, pushOtherTeams, pushOwnTeam, never)
 	 * @param receiver      {@link Player} that will see the update
 	 */
-	public static void setGlowing(Entity entity, Color color, String tagVisibility, String push, Player receiver) {
+	public static void setGlowing(Entity entity, GlowAPI.Color color, String tagVisibility, String push, Player receiver) {
 		if (receiver == null) { return; }
 
 		boolean glowing = color != null;
 		if (entity == null) { glowing = false; }
-		if (entity instanceof OfflinePlayer) { if (!((OfflinePlayer) entity).isOnline()) { glowing = false; } }
+		if (entity instanceof OfflinePlayer) {
+			if (!((OfflinePlayer) entity).isOnline()) { glowing = false; }
+		}
 
 		boolean wasGlowing = dataMap.containsKey(entity != null ? entity.getUniqueId() : null);
 		GlowData glowData;
 		if (wasGlowing && entity != null) { glowData = dataMap.get(entity.getUniqueId()); } else { glowData = new GlowData(); }
 
-		Color oldColor = wasGlowing ? glowData.colorMap.get(receiver.getUniqueId()) : null;
+		GlowAPI.Color oldColor = wasGlowing ? glowData.colorMap.get(receiver.getUniqueId()) : null;
 
 		if (glowing) {
 			glowData.colorMap.put(receiver.getUniqueId(), color);
@@ -154,11 +196,11 @@ public class GlowAPI extends JavaPlugin {
 		if (!receiver.isOnline()) { return; }
 
 		sendGlowPacket(entity, wasGlowing, glowing, receiver);
-		if (oldColor != null && oldColor != Color.NONE/*We never add to NONE, so no need to remove*/) {
+		if (oldColor != null && oldColor != GlowAPI.Color.NONE/*We never add to NONE, so no need to remove*/) {
 			sendTeamPacket(entity, oldColor/*use the old color to remove the player from its team*/, false, false, tagVisibility, push, receiver);
 		}
 		if (glowing) {
-			sendTeamPacket(entity, color, false, color != Color.NONE, tagVisibility, push, receiver);
+			sendTeamPacket(entity, color, false, color != GlowAPI.Color.NONE, tagVisibility, push, receiver);
 		}
 	}
 
@@ -169,7 +211,7 @@ public class GlowAPI extends JavaPlugin {
 	 * @param color    {@link GlowAPI.Color} of the glow, or <code>null</code> to stop glowing
 	 * @param receiver {@link Player} that will see the update
 	 */
-	public static void setGlowing(Entity entity, Color color, Player receiver) {
+	public static void setGlowing(Entity entity, GlowAPI.Color color, Player receiver) {
 		setGlowing(entity, color, "always", "always", receiver);
 	}
 
@@ -179,10 +221,10 @@ public class GlowAPI extends JavaPlugin {
 	 * @param entity   {@link Entity} to update
 	 * @param glowing  whether the entity is glowing or not
 	 * @param receiver {@link Player} that will see the update
-	 * @see #setGlowing(Entity, Color, Player)
+	 * @see #setGlowing(Entity, GlowAPI.Color, Player)
 	 */
 	public static void setGlowing(Entity entity, boolean glowing, Player receiver) {
-		setGlowing(entity, glowing ? Color.NONE : null, receiver);
+		setGlowing(entity, glowing ? GlowAPI.Color.NONE : null, receiver);
 	}
 
 	/**
@@ -191,7 +233,7 @@ public class GlowAPI extends JavaPlugin {
 	 * @param entity    {@link Entity} to update
 	 * @param glowing   whether the entity is glowing or not
 	 * @param receivers Collection of {@link Player}s that will see the update
-	 * @see #setGlowing(Entity, Color, Player)
+	 * @see #setGlowing(Entity, GlowAPI.Color, Player)
 	 */
 	public static void setGlowing(Entity entity, boolean glowing, Collection<? extends Player> receivers) {
 		for (Player receiver : receivers) {
@@ -206,7 +248,7 @@ public class GlowAPI extends JavaPlugin {
 	 * @param color     {@link GlowAPI.Color} of the glow, or <code>null</code> to stop glowing
 	 * @param receivers Collection of {@link Player}s that will see the update
 	 */
-	public static void setGlowing(Entity entity, Color color, Collection<? extends Player> receivers) {
+	public static void setGlowing(Entity entity, GlowAPI.Color color, Collection<? extends Player> receivers) {
 		for (Player receiver : receivers) {
 			setGlowing(entity, color, receiver);
 		}
@@ -219,7 +261,7 @@ public class GlowAPI extends JavaPlugin {
 	 * @param color    {@link GlowAPI.Color} of the glow, or <code>null</code> to stop glowing
 	 * @param receiver {@link Player} that will see the update
 	 */
-	public static void setGlowing(Collection<? extends Entity> entities, Color color, Player receiver) {
+	public static void setGlowing(Collection<? extends Entity> entities, GlowAPI.Color color, Player receiver) {
 		for (Entity entity : entities) {
 			setGlowing(entity, color, receiver);
 		}
@@ -232,7 +274,7 @@ public class GlowAPI extends JavaPlugin {
 	 * @param color     {@link GlowAPI.Color} of the glow, or <code>null</code> to stop glowing
 	 * @param receivers Collection of {@link Player}s that will see the update
 	 */
-	public static void setGlowing(Collection<? extends Entity> entities, Color color, Collection<? extends Player> receivers) {
+	public static void setGlowing(Collection<? extends Entity> entities, GlowAPI.Color color, Collection<? extends Player> receivers) {
 		for (Entity entity : entities) {
 			setGlowing(entity, color, receivers);
 		}
@@ -281,7 +323,7 @@ public class GlowAPI extends JavaPlugin {
 	 * @param receiver {@link Player} receiver of the color (as used in the setGlowing methods)
 	 * @return the {@link GlowAPI.Color}, or <code>null</code> if the entity doesn't appear glowing to the player
 	 */
-	public static Color getGlowColor(Entity entity, Player receiver) {
+	public static GlowAPI.Color getGlowColor(Entity entity, Player receiver) {
 		if (!dataMap.containsKey(entity.getUniqueId())) { return null; }
 		GlowData data = dataMap.get(entity.getUniqueId());
 		return data.colorMap.get(receiver.getUniqueId());
@@ -295,14 +337,7 @@ public class GlowAPI extends JavaPlugin {
 		final int invertedEntityId = -entity.getEntityId();
 
 		byte entityByte = 0x00;
-		if (entity.getFireTicks() != 0) entityByte = (byte) (entityByte | ENTITY_ON_FIRE);
-		// if () entityByte = (byte) (entityByte | ENTITY_CROUCHED)
-		if (entity.isInsideVehicle()) entityByte = (byte) (entityByte | ENTITY_RIDING);
-		// if () entityByte = (byte) (entityByte | ENTITY_SPRINTING)
-		// if () entityByte = (byte) (entityByte | ENTITY_SWIMMING)
-		// if () entityByte = (byte) (entityByte | ENTITY_INVISIBLE)
 		if (glowing) entityByte = (byte) (entityByte | ENTITY_GLOWING_EFFECT);
-		// if () entityByte = (byte) (entityByte | ENTITY_FLYING_WITH_ELYTRA)
 
 		final WrappedWatchableObject wrappedMetadata = new WrappedWatchableObject(dataWatcherObject, entityByte);
 		final List<WrappedWatchableObject> metadata = Collections.singletonList(wrappedMetadata);
@@ -350,7 +385,7 @@ public class GlowAPI extends JavaPlugin {
 	 * @param push
 	 * @param receiver
 	 */
-	protected static void sendTeamPacket(Entity entity, Color color, boolean createNewTeam, boolean addEntity, String tagVisibility, String push, Player receiver) {
+	protected static void sendTeamPacket(Entity entity, GlowAPI.Color color, boolean createNewTeam, boolean addEntity, String tagVisibility, String push, Player receiver) {
 		final PacketContainer packet = new PacketContainer(PacketType.Play.Server.SCOREBOARD_TEAM);
 		final WrapperPlayServerScoreboardTeam wrappedPacket = new WrapperPlayServerScoreboardTeam(packet);
 
@@ -362,9 +397,9 @@ public class GlowAPI extends JavaPlugin {
 		wrappedPacket.setTeamName(teamName);
 
 		if (createNewTeam) {
+			wrappedPacket.setTeamColor((ChatColor) color.packetValue);
 			wrappedPacket.setTeamPrefix("§" + color.colorCode);
 			wrappedPacket.setTeamDisplayName(teamName);
-			wrappedPacket.setTeamSuffix("");
 		} else {
 			//Add/remove players
 			String entry;
@@ -382,44 +417,6 @@ public class GlowAPI extends JavaPlugin {
 			protocolManager.sendServerPacket(receiver, packet);
 		} catch (InvocationTargetException e) {
 			throw new RuntimeException("Unable to send packet " + packet.toString() + " to player " + receiver.toString(), e);
-		}
-	}
-
-	/**
-	 * Team Colors
-	 */
-	public enum Color {
-
-		BLACK("0"),
-		DARK_BLUE("1"),
-		DARK_GREEN("2"),
-		DARK_AQUA("3"),
-		DARK_RED("4"),
-		DARK_PURPLE("5"),
-		GOLD("6"),
-		GRAY("7"),
-		DARK_GRAY("8"),
-		BLUE("9"),
-		GREEN("a"),
-		AQUA("b"),
-		RED("c"),
-		PURPLE("d"),
-		YELLOW("e"),
-		WHITE("f"),
-		NONE("");
-
-		String colorCode;
-
-		Color(String colorCode) {
-			this.colorCode = colorCode;
-		}
-
-		String getTeamName() {
-			String name = String.format("GAPI#%s", name());
-			if (name.length() > MAX_TEAM_NAME_LENGTH) {
-				name = name.substring(0, MAX_TEAM_NAME_LENGTH);
-			}
-			return name;
 		}
 	}
 
