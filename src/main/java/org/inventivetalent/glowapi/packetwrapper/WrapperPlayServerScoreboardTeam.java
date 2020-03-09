@@ -24,6 +24,7 @@ import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.reflect.IntEnum;
 import com.comphenix.protocol.utility.MinecraftReflection;
 import org.bukkit.ChatColor;
+import org.inventivetalent.glowapi.GlowAPI;
 
 public class WrapperPlayServerScoreboardTeam extends AbstractPacket {
     public static final PacketType TYPE = PacketType.Play.Server.SCOREBOARD_TEAM;
@@ -133,26 +134,6 @@ public class WrapperPlayServerScoreboardTeam extends AbstractPacket {
     }
     
     /**
-     * Set the team suffix. This will be inserted after the name of each team member.
-     * <p>
-     * A team must be created or updated.
-     * @return The current Team Suffix
-    */
-    public String getTeamSuffix() {
-        return handle.getStrings().read(3);
-    }
-    
-    /**
-     * Set only if Mode = 0 or 2. This will be after before the name of each team member.
-     * <p>
-     * A team must be created or updated.
-     * @param value - new value.
-    */
-    public void setTeamSuffix(String value) {
-        handle.getStrings().write(3, value);
-    }
-    
-    /**
      * Retrieve whether or not friendly fire is enabled.
      * <p>
      * A team must be created or updated.
@@ -203,11 +184,41 @@ public class WrapperPlayServerScoreboardTeam extends AbstractPacket {
     	handle.getSpecificModifier(Collection.class).write(0, players);
     }
 
+    /**
+     * Retrieve the color of a team
+     * <p>
+     * A team must be created or updated.
+     * @return The current color
+     */
     public ChatColor getTeamColor() {
         return handle.getEnumModifier(ChatColor.class, MinecraftReflection.getMinecraftClass("EnumChatFormat")).read(0);
     }
 
+    /**
+     * Sets the color of a team.
+     * <p>
+     * A team must be created or updated.
+     * @param value - new value.
+     */
     public void setTeamColor(ChatColor value) {
         handle.getEnumModifier(ChatColor.class, MinecraftReflection.getMinecraftClass("EnumChatFormat")).write(0, value);
     }
+
+    /*
+    public GlowAPI.TeamPush getTeamPush() {
+        return handle.getEnumModifier(GlowAPI.TeamPush.class, MinecraftReflection.getMinecraftClass("ScoreboardTeamBase.EnumTeamPush")).read(0);
+    }
+
+    public void setTeamPush(GlowAPI.TeamPush value) {
+        handle.getEnumModifier(GlowAPI.TeamPush.class, MinecraftReflection.getMinecraftClass("ScoreboardTeamBase.EnumTeamPush")).write(0, value);
+    }
+
+    public GlowAPI.NameTagVisibility getNameTagVisibility() {
+        return handle.getEnumModifier(GlowAPI.NameTagVisibility.class, MinecraftReflection.getMinecraftClass("ScoreboardTeamBase.EnumNameTagVisibility")).read(0);
+    }
+
+    public void setNameTagVisibility(GlowAPI.NameTagVisibility value) {
+        handle.getEnumModifier(GlowAPI.NameTagVisibility.class, MinecraftReflection.getMinecraftClass("ScoreboardTeamBase.EnumNameTagVisibility")).write(0, value);
+    }
+    */
 }

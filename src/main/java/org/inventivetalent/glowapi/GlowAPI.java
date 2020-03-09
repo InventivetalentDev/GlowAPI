@@ -18,6 +18,7 @@ import org.bukkit.World;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.scoreboard.Team;
 import org.inventivetalent.glowapi.listeners.PlayerJoinListener;
 import org.inventivetalent.glowapi.listeners.PlayerQuitListener;
 import org.inventivetalent.glowapi.packetwrapper.WrapperPlayServerEntityMetadata;
@@ -49,16 +50,6 @@ public class GlowAPI extends JavaPlugin {
 			isPaper = false;
 		}
 	}
-
-	//Options
-	/**
-	 * Default name-tag visibility (always, hideForOtherTeams, hideForOwnTeam, never)
-	 */
-	public static String TEAM_TAG_VISIBILITY = "always";
-	/**
-	 * Default push behaviour (always, pushOtherTeams, pushOwnTeam, never)
-	 */
-	public static String TEAM_PUSH           = "always";
 
 	/**
 	 * Team Colors
@@ -97,6 +88,40 @@ public class GlowAPI extends JavaPlugin {
 				name = name.substring(0, 16);
 			}
 			return name;
+		}
+	}
+
+	/**
+	 * Team Push
+	 */
+	public enum TeamPush {
+
+		ALWAYS("always"),
+		PUSH_OTHER_TEAMS("pushOtherTeams"),
+		PUSH_OWN_TEAM("pushOwnTeam"),
+		NEVER("never");
+
+		String collisionRule;
+
+		TeamPush(String collisionRule) {
+			this.collisionRule = collisionRule;
+		}
+	}
+
+	/**
+	 * Team Nametag Visibility
+	 */
+	public enum NameTagVisibility {
+
+		ALWAYS("always"),
+		HIDE_FOR_OTHER_TEAMS("hideForOtherTeams"),
+		HIDE_FOR_OWN_TEAM("hideForOwnTeam"),
+		NEVER("never");
+
+		String nameTagVisibility;
+
+		NameTagVisibility(String nameTagVisibility) {
+			this.nameTagVisibility = nameTagVisibility;
 		}
 	}
 
@@ -162,7 +187,7 @@ public class GlowAPI extends JavaPlugin {
 	 * @param push          push behaviour (always, pushOtherTeams, pushOwnTeam, never)
 	 * @param receiver      {@link Player} that will see the update
 	 */
-	public static void setGlowing(Entity entity, GlowAPI.Color color, String tagVisibility, String push, Player receiver) {
+	public static void setGlowing(Entity entity, GlowAPI.Color color, NameTagVisibility tagVisibility, TeamPush push, Player receiver) {
 		if (receiver == null) { return; }
 
 		boolean glowing = color != null;
@@ -212,7 +237,7 @@ public class GlowAPI extends JavaPlugin {
 	 * @param receiver {@link Player} that will see the update
 	 */
 	public static void setGlowing(Entity entity, GlowAPI.Color color, Player receiver) {
-		setGlowing(entity, color, "always", "always", receiver);
+		setGlowing(entity, color, NameTagVisibility.ALWAYS, TeamPush.ALWAYS, receiver);
 	}
 
 	/**
@@ -337,7 +362,7 @@ public class GlowAPI extends JavaPlugin {
 		final int invertedEntityId = -entity.getEntityId();
 
 		byte entityByte = 0x00;
-		if (glowing) entityByte = (byte) (entityByte | ENTITY_GLOWING_EFFECT);
+		entityByte = (byte) (glowing ? (entityByte | ENTITY_GLOWING_EFFECT) : (entityByte & ~ENTITY_GLOWING_EFFECT));
 
 		final WrappedWatchableObject wrappedMetadata = new WrappedWatchableObject(dataWatcherObject, entityByte);
 		final List<WrappedWatchableObject> metadata = Collections.singletonList(wrappedMetadata);
@@ -360,7 +385,7 @@ public class GlowAPI extends JavaPlugin {
 	 * @param tagVisibility visibility of the name-tag (always, hideForOtherTeams, hideForOwnTeam, never)
 	 * @param push          push behaviour (always, pushOtherTeams, pushOwnTeam, never)
 	 */
-	public static void initTeam(Player receiver, String tagVisibility, String push) {
+	public static void initTeam(Player receiver, NameTagVisibility tagVisibility, TeamPush push) {
 		for (GlowAPI.Color color : GlowAPI.Color.values()) {
 			GlowAPI.sendTeamPacket(null, color, true, false, tagVisibility, push, receiver);
 		}
@@ -372,7 +397,7 @@ public class GlowAPI extends JavaPlugin {
 	 * @param receiver {@link Player} receiver
 	 */
 	public static void initTeam(Player receiver) {
-		initTeam(receiver, TEAM_TAG_VISIBILITY, TEAM_PUSH);
+		initTeam(receiver, NameTagVisibility.ALWAYS, TeamPush.ALWAYS);
 	}
 
 	/**
@@ -385,7 +410,7 @@ public class GlowAPI extends JavaPlugin {
 	 * @param push
 	 * @param receiver
 	 */
-	protected static void sendTeamPacket(Entity entity, GlowAPI.Color color, boolean createNewTeam, boolean addEntity, String tagVisibility, String push, Player receiver) {
+	protected static void sendTeamPacket(Entity entity, GlowAPI.Color color, boolean createNewTeam, boolean addEntity, NameTagVisibility tagVisibility, TeamPush push, Player receiver) {
 		final PacketContainer packet = new PacketContainer(PacketType.Play.Server.SCOREBOARD_TEAM);
 		final WrapperPlayServerScoreboardTeam wrappedPacket = new WrapperPlayServerScoreboardTeam(packet);
 
@@ -395,6 +420,10 @@ public class GlowAPI extends JavaPlugin {
 
 		wrappedPacket.setPacketMode(packetMode);
 		wrappedPacket.setTeamName(teamName);
+		/*
+		wrappedPacket.setNameTagVisibility(tagVisibility);
+		wrappedPacket.setTeamPush(push);
+		*/
 
 		if (createNewTeam) {
 			wrappedPacket.setTeamColor((ChatColor) color.packetValue);
