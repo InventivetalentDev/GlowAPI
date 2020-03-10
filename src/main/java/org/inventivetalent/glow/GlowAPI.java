@@ -5,14 +5,10 @@ import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.ProtocolManager;
 import com.comphenix.protocol.async.AsyncListenerHandler;
-import com.comphenix.protocol.events.ListenerPriority;
-import com.comphenix.protocol.events.PacketAdapter;
 import com.comphenix.protocol.events.PacketContainer;
-import com.comphenix.protocol.events.PacketEvent;
 import com.comphenix.protocol.events.PacketListener;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher;
 import com.comphenix.protocol.wrappers.WrappedWatchableObject;
-import com.sun.org.apache.xpath.internal.objects.XNull;
 import org.bstats.bukkit.MetricsLite;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -121,6 +117,7 @@ public class GlowAPI extends JavaPlugin {
 	 * @param push          push behaviour (always, pushOtherTeams, pushOwnTeam, never)
 	 * @param player      {@link Player} that will see the update
 	 */
+	@SuppressWarnings("unused")
 	public static void setGlowing(@Nullable Entity entity,
 								  @Nullable GlowAPI.Color color,
 								  @NotNull NameTagVisibility tagVisibility,
@@ -183,6 +180,7 @@ public class GlowAPI extends JavaPlugin {
 	 * @param color    {@link GlowAPI.Color} of the glow, or <code>null</code> to stop glowing
 	 * @param player {@link Player} that will see the update
 	 */
+	@SuppressWarnings("unused")
 	public static void setGlowing(@Nullable Entity entity,
 								  @Nullable GlowAPI.Color color,
 								  @NotNull Player player) {
@@ -197,6 +195,7 @@ public class GlowAPI extends JavaPlugin {
 	 * @param player {@link Player} that will see the update
 	 * @see #setGlowing(Entity, GlowAPI.Color, Player)
 	 */
+	@SuppressWarnings("unused")
 	public static void setGlowing(@Nullable Entity entity,
 								  boolean glowing,
 								  @NotNull Player player) {
@@ -211,6 +210,7 @@ public class GlowAPI extends JavaPlugin {
 	 * @param players Collection of {@link Player}s that will see the update
 	 * @see #setGlowing(Entity, GlowAPI.Color, Player)
 	 */
+	@SuppressWarnings("unused")
 	public static void setGlowing(@Nullable Entity entity,
 								  boolean glowing,
 								  @NotNull Collection<? extends Player> players) {
@@ -226,6 +226,7 @@ public class GlowAPI extends JavaPlugin {
 	 * @param color     {@link GlowAPI.Color} of the glow, or <code>null</code> to stop glowing
 	 * @param players Collection of {@link Player}s that will see the update
 	 */
+	@SuppressWarnings("unused")
 	public static void setGlowing(@Nullable Entity entity,
 								  @Nullable GlowAPI.Color color,
 								  @NotNull Collection<? extends Player> players) {
@@ -241,6 +242,7 @@ public class GlowAPI extends JavaPlugin {
 	 * @param color    {@link GlowAPI.Color} of the glow, or <code>null</code> to stop glowing
 	 * @param player {@link Player} that will see the update
 	 */
+	@SuppressWarnings("unused")
 	public static void setGlowing(@NotNull Collection<? extends Entity> entities,
 								  @Nullable GlowAPI.Color color,
 								  @NotNull Player player) {
@@ -256,6 +258,7 @@ public class GlowAPI extends JavaPlugin {
 	 * @param color     {@link GlowAPI.Color} of the glow, or <code>null</code> to stop glowing
 	 * @param players Collection of {@link Player}s that will see the update
 	 */
+	@SuppressWarnings("unused")
 	public static void setGlowing(@NotNull Collection<? extends Entity> entities,
 								  @Nullable GlowAPI.Color color,
 								  @NotNull Collection<? extends Player> players) {
@@ -271,6 +274,7 @@ public class GlowAPI extends JavaPlugin {
 	 * @param player {@link Player} player to check (as used in the setGlowing methods)
 	 * @return <code>true</code> if the entity appears glowing to the player
 	 */
+	@SuppressWarnings("unused")
 	public static boolean isGlowing(@NotNull Entity entity,
 									@NotNull Player player) {
 		return getGlowColor(entity, player) != null;
@@ -284,6 +288,7 @@ public class GlowAPI extends JavaPlugin {
 	 * @param checkAll  if <code>true</code>, this only returns <code>true</code> if the entity is glowing for all players; if <code>false</code> this returns <code>true</code> if the entity is glowing for any of the players
 	 * @return <code>true</code> if the entity appears glowing to the players
 	 */
+	@SuppressWarnings("unused")
 	public static boolean isGlowing(@NotNull Entity entity,
 									@NotNull Collection<? extends Player> players,
 									boolean checkAll) {
@@ -310,6 +315,7 @@ public class GlowAPI extends JavaPlugin {
 	 * @param player {@link Player} player of the color (as used in the setGlowing methods)
 	 * @return the {@link GlowAPI.Color}, or <code>null</code> if the entity doesn't appear glowing to the player
 	 */
+	@SuppressWarnings("unused")
 	@Nullable public static GlowAPI.Color getGlowColor(@NotNull Entity entity,
 													   @NotNull Player player) {
 		final UUID entityUniqueId = entity.getUniqueId();
@@ -352,6 +358,7 @@ public class GlowAPI extends JavaPlugin {
 	 * @param tagVisibility visibility of the name-tag (always, hideForOtherTeams, hideForOwnTeam, never)
 	 * @param push          push behaviour (always, pushOtherTeams, pushOwnTeam, never)
 	 */
+	@SuppressWarnings("unused")
 	public static void initTeam(@NotNull Player player,
 								@NotNull NameTagVisibility tagVisibility,
 								@NotNull TeamPush push) {
@@ -365,6 +372,7 @@ public class GlowAPI extends JavaPlugin {
 	 *
 	 * @param player {@link Player} player
 	 */
+	@SuppressWarnings("unused")
 	public static void initTeam(@NotNull Player player) {
 		initTeam(player, NameTagVisibility.ALWAYS, TeamPush.ALWAYS);
 	}
@@ -425,6 +433,7 @@ public class GlowAPI extends JavaPlugin {
 		}
 	}
 
+	@SuppressWarnings("unused")
 	@Nullable
 	public static Entity getEntityById(@NotNull World world,
 									   int entityId) {
