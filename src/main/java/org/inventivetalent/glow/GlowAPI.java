@@ -12,6 +12,7 @@ import com.comphenix.protocol.events.PacketEvent;
 import com.comphenix.protocol.events.PacketListener;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher;
 import com.comphenix.protocol.wrappers.WrappedWatchableObject;
+import com.sun.org.apache.xpath.internal.objects.XNull;
 import org.bstats.bukkit.MetricsLite;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -47,7 +48,6 @@ public class GlowAPI extends JavaPlugin {
 
 	private ProtocolManager protocolManager;
 	private AsynchronousManager asynchronousManager;
-	private PacketListener entityMetadataListener;
 	private AsyncListenerHandler entityMetadataListenerHandler;
 
 	/**
@@ -101,7 +101,8 @@ public class GlowAPI extends JavaPlugin {
 
 		protocolManager = ProtocolLibrary.getProtocolManager();
 		asynchronousManager = protocolManager.getAsynchronousManager();
-		entityMetadataListener = new EntityMetadataListener();
+
+		final PacketListener entityMetadataListener = new EntityMetadataListener();
 		entityMetadataListenerHandler = asynchronousManager.registerAsyncHandler(entityMetadataListener);
 		entityMetadataListenerHandler.syncStart();
 	}
