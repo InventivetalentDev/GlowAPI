@@ -5,7 +5,9 @@ This API allows you to change the glow-color of entities and players.
 - [Website](https://inventivetalent.org/)
 - [Donate](https://donation.inventivetalent.org/plugin/GlowAPI)
 
-**Depends on [PacketListenerAPI](https://www.spigotmc.org/resources/api-packetlistenerapi.2930/)**
+**Depends on [ProtocolLib](https://www.spigotmc.org/resources/protocollib.1997/)**
+
+Versions 1.4.11 and below depended on [PacketListenerAPI](https://www.spigotmc.org/resources/api-packetlistenerapi.2930/) instead.
 
 Version 1.4.7 is intended for 1.13+ only. For older MC versions, please use 1.4.6.
 
@@ -39,4 +41,4 @@ Version 1.4.7 is intended for 1.13+ only. For older MC versions, please use 1.4.
     </dependencies>
     
 ## API Manager
-This API is compatible with [APIManager](https://www.spigotmc.org/resources/api-apimanager.19738/).
+API versions lower than 2.0.0 are compatible with [APIManager](https://www.spigotmc.org/resources/api-apimanager.19738/).
