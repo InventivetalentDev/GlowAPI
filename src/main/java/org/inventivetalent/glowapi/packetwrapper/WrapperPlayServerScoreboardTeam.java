@@ -24,9 +24,11 @@ import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.reflect.IntEnum;
 import com.comphenix.protocol.utility.MinecraftReflection;
 import org.bukkit.ChatColor;
-import org.inventivetalent.glowapi.GlowAPI;
 
 public class WrapperPlayServerScoreboardTeam extends AbstractPacket {
+    public static final Class<?> EnumChatFormat = MinecraftReflection.getMinecraftClass("EnumChatFormat");
+    public static final Class<?> ScoreboardTeamBase = MinecraftReflection.getMinecraftClass("ScoreboardTeamBase");
+
     public static final PacketType TYPE = PacketType.Play.Server.SCOREBOARD_TEAM;
     
     /**
@@ -191,7 +193,7 @@ public class WrapperPlayServerScoreboardTeam extends AbstractPacket {
      * @return The current color
      */
     public ChatColor getTeamColor() {
-        return handle.getEnumModifier(ChatColor.class, MinecraftReflection.getMinecraftClass("EnumChatFormat")).read(0);
+        return handle.getEnumModifier(ChatColor.class, EnumChatFormat).read(0);
     }
 
     /**
@@ -201,7 +203,7 @@ public class WrapperPlayServerScoreboardTeam extends AbstractPacket {
      * @param value - new value.
      */
     public void setTeamColor(ChatColor value) {
-        handle.getEnumModifier(ChatColor.class, MinecraftReflection.getMinecraftClass("EnumChatFormat")).write(0, value);
+        handle.getEnumModifier(ChatColor.class, EnumChatFormat).write(0, value);
     }
 
     /*
