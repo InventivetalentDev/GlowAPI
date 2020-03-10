@@ -15,7 +15,7 @@
  *  02111-1307 USA
  */
 
-package org.inventivetalent.glowapi.packetwrapper;
+package org.inventivetalent.glow.packetwrapper;
 
 import java.util.Collection;
 

@@ -1,4 +1,4 @@
-package org.inventivetalent.glowapi;
+package org.inventivetalent.glow;
 
 import java.util.Map;
 import java.util.Objects;

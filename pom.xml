@@ -4,11 +4,11 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>org.inventivetalent.glowapi</groupId>
+    <groupId>org.inventivetalent.glow</groupId>
     <artifactId>GlowAPI</artifactId>
     <version>2.0.0-SNAPSHOT</version>
 
-    <name>GlowAPI</name>
+    <name>${project.artifactId}</name>
     <description>This API allows you to change the glow-color of entities and players.</description>
     <url>https://www.spigotmc.org/resources/api-glowapi.19422/</url>
 
@@ -32,7 +32,7 @@
     </scm>
 
     <build>
-        <finalName>GlowAPI_v${project.version}</finalName>
+        <finalName>${project.artifactId}_v${project.version}</finalName>
         <defaultGoal>clean package</defaultGoal>
         <resources>
             <resource>
@@ -72,11 +72,11 @@
                             <relocations>
                                 <relocation>
                                     <pattern>org.bstats</pattern>
-                                    <shadedPattern>org.inventivetalent.glowapi</shadedPattern>
+                                    <shadedPattern>org.inventivetalent.glow</shadedPattern>
                                 </relocation>
                                 <relocation>
                                     <pattern>org.inventivetalent.reflection</pattern>
-                                    <shadedPattern>org.inventivetalent.glowapi.reflection</shadedPattern>
+                                    <shadedPattern>org.inventivetalent.glow.reflection</shadedPattern>
                                 </relocation>
                             </relocations>
                         </configuration>
