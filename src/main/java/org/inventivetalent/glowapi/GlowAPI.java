@@ -1,5 +1,6 @@
 package org.inventivetalent.glowapi;
 
+import com.comphenix.protocol.AsynchronousManager;
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.ProtocolManager;
@@ -134,8 +135,8 @@ public class GlowAPI extends JavaPlugin {
 		Bukkit.getPluginManager().registerEvents(new PlayerJoinListener(), this);
 		Bukkit.getPluginManager().registerEvents(new PlayerQuitListener(), this);
 
-		ProtocolManager protocolManager = ProtocolLibrary.getProtocolManager();
-		protocolManager.addPacketListener(new PacketAdapter(this, ListenerPriority.NORMAL, PacketType.Play.Server.ENTITY_METADATA) {
+		final AsynchronousManager protocolManager = ProtocolLibrary.getProtocolManager().getAsynchronousManager();
+		protocolManager.registerAsyncHandler(new PacketAdapter(this, ListenerPriority.NORMAL, PacketType.Play.Server.ENTITY_METADATA) {
 
 			@Override
 			public void onPacketSending(PacketEvent event) {
@@ -171,7 +172,7 @@ public class GlowAPI extends JavaPlugin {
 				wrappedEntityObj.setValue(entityByte);
 			}
 
-		});
+		}).syncStart();
 	}
 
 	/**
