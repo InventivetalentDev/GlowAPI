@@ -4,12 +4,12 @@ import com.comphenix.protocol.AsynchronousManager;
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.ProtocolManager;
+import com.comphenix.protocol.async.AsyncListenerHandler;
 import com.comphenix.protocol.events.ListenerPriority;
 import com.comphenix.protocol.events.PacketAdapter;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.events.PacketEvent;
 import com.comphenix.protocol.events.PacketListener;
-import com.comphenix.protocol.utility.MinecraftReflection;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher;
 import com.comphenix.protocol.wrappers.WrappedWatchableObject;
 import org.bstats.bukkit.MetricsLite;
@@ -19,7 +19,9 @@ import org.bukkit.OfflinePlayer;
 import org.bukkit.World;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
+import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.inventivetalent.glow.listeners.EntityMetadataListener;
 import org.inventivetalent.glow.listeners.PlayerJoinListener;
 import org.inventivetalent.glow.listeners.PlayerQuitListener;
 import org.inventivetalent.glow.packetwrapper.WrapperPlayServerEntityMetadata;
@@ -39,50 +41,14 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class GlowAPI extends JavaPlugin {
-	private static final byte ENTITY_GLOWING_EFFECT = (byte) 0x40;
+	public static final byte ENTITY_GLOWING_EFFECT = (byte) 0x40;
 
 	private static Map<UUID, GlowData> dataMap = new ConcurrentHashMap<>();
 
 	private ProtocolManager protocolManager;
 	private AsynchronousManager asynchronousManager;
-
-	private final PacketListener entityMetadataListener = new PacketAdapter(this,
-																			ListenerPriority.NORMAL,
-																			PacketType.Play.Server.ENTITY_METADATA) {
-		@Override
-		public void onPacketSending(PacketEvent event) {
-			PacketContainer packet = event.getPacket();
-			WrapperPlayServerEntityMetadata wrappedPacket = new WrapperPlayServerEntityMetadata(packet);
-
-			final int entityId = wrappedPacket.getEntityID();
-			if (entityId < 0) {//Our packet
-				//Reset the ID and let it through
-				final int invertedEntityId = -entityId;
-				wrappedPacket.setEntityID(invertedEntityId);
-				return;
-			}
-
-			final List<WrappedWatchableObject> metaData = wrappedPacket.getMetadata();
-			if (metaData == null || metaData.isEmpty()) return;//Nothing to modify
-
-			Player player = event.getPlayer();
-
-			final Entity entity = getEntityById(player.getWorld(), entityId);
-			if (entity == null) return;
-
-			//Check if the entity is glowing
-			if (!GlowAPI.isGlowing(entity, player)) return;
-
-			//Update the DataWatcher Item
-			final WrappedWatchableObject wrappedEntityObj = metaData.get(0);
-			final Object entityObj = wrappedEntityObj.getValue();
-			if (!(entityObj instanceof Byte)) return;
-			byte entityByte = (byte) entityObj;
-			/*Maybe use the isGlowing result*/
-			entityByte = (byte) (entityByte | ENTITY_GLOWING_EFFECT);
-			wrappedEntityObj.setValue(entityByte);
-		}
-	};
+	private PacketListener entityMetadataListener;
+	private AsyncListenerHandler entityMetadataListenerHandler;
 
 	/**
 	 * Team Colors
@@ -123,27 +89,26 @@ public class GlowAPI extends JavaPlugin {
 	}
 
 	@NotNull
-	private static GlowAPI getPlugin() { return getPlugin(GlowAPI.class); }
+	public static GlowAPI getPlugin() { return getPlugin(GlowAPI.class); }
 
 	@Override
 	public void onEnable() {
 		new MetricsLite(this, 2190);
 
-		Bukkit.getPluginManager().registerEvents(new PlayerJoinListener(), this);
-		Bukkit.getPluginManager().registerEvents(new PlayerQuitListener(), this);
+		final PluginManager pluginManager = Bukkit.getPluginManager();
+		pluginManager.registerEvents(new PlayerJoinListener(), this);
+		pluginManager.registerEvents(new PlayerQuitListener(), this);
 
 		protocolManager = ProtocolLibrary.getProtocolManager();
 		asynchronousManager = protocolManager.getAsynchronousManager();
-		asynchronousManager.registerAsyncHandler(entityMetadataListener).syncStart();
+		entityMetadataListener = new EntityMetadataListener();
+		entityMetadataListenerHandler = asynchronousManager.registerAsyncHandler(entityMetadataListener);
+		entityMetadataListenerHandler.syncStart();
 	}
 
 	@Override
 	public void onDisable() {
-		try {
-			asynchronousManager.unregisterAsyncHandler(entityMetadataListener);
-		} catch (java.lang.NullPointerException e) {
-			getLogger().warning("Unable to unregister entityMetadataListener, potential memory leak.");
-		}
+		asynchronousManager.unregisterAsyncHandler(entityMetadataListenerHandler);
 	}
 
 	/**
