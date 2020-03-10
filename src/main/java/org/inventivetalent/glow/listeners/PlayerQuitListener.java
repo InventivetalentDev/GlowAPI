@@ -7,11 +7,12 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.inventivetalent.glow.GlowAPI;
+import org.jetbrains.annotations.NotNull;
 
 public class PlayerQuitListener implements Listener {
 
     @EventHandler(ignoreCancelled = true, priority = EventPriority.MONITOR)
-    public void onPlayerQuit(PlayerQuitEvent event) {
+    public void onPlayerQuit(@NotNull PlayerQuitEvent event) {
         for (Player receiver : Bukkit.getOnlinePlayers()) {
             if (GlowAPI.isGlowing(event.getPlayer(), receiver)) {
                 GlowAPI.setGlowing(event.getPlayer(), null, receiver);

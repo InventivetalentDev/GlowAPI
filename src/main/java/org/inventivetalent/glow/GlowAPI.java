@@ -25,6 +25,8 @@ import org.inventivetalent.glow.packetwrapper.WrapperPlayServerScoreboardTeam;
 import org.inventivetalent.glow.packetwrapper.WrapperPlayServerScoreboardTeam.Modes;
 import org.inventivetalent.glow.packetwrapper.WrapperPlayServerScoreboardTeam.NameTagVisibility;
 import org.inventivetalent.glow.packetwrapper.WrapperPlayServerScoreboardTeam.TeamPush;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.Collection;
@@ -72,21 +74,17 @@ public class GlowAPI extends JavaPlugin {
 
 		ChatColor chatColor;
 
-		Color(ChatColor chatColor) {
+		Color(@NotNull ChatColor chatColor) {
 			this.chatColor = chatColor;
 		}
 
-		String getTeamName() {
+		@NotNull String getTeamName() {
 			String name = String.format("GAPI#%s", name());
 			if (name.length() > 16) {
 				name = name.substring(0, 16);
 			}
 			return name;
 		}
-	}
-
-	public static GlowAPI getPlugin() {
-		return getPlugin(GlowAPI.class);
 	}
 
 	@Override
@@ -145,7 +143,7 @@ public class GlowAPI extends JavaPlugin {
 	 * @param push          push behaviour (always, pushOtherTeams, pushOwnTeam, never)
 	 * @param player      {@link Player} that will see the update
 	 */
-	public static void setGlowing(Entity entity, GlowAPI.Color color, NameTagVisibility tagVisibility, TeamPush push, Player player) {
+	public static void setGlowing(@Nullable Entity entity, @Nullable GlowAPI.Color color, @NotNull NameTagVisibility tagVisibility, @NotNull TeamPush push, @Nullable Player player) {
 		if (player == null) return;
 
 		boolean glowing = color != null;
@@ -179,9 +177,13 @@ public class GlowAPI extends JavaPlugin {
 		}
 		if (!player.isOnline()) return;
 
-		sendGlowPacket(entity, wasGlowing, glowing, player);
-		if (oldColor != null && oldColor != GlowAPI.Color.NONE/*We never add to NONE, so no need to remove*/) {
-			sendTeamPacket(entity, oldColor/*use the old color to remove the player from its team*/, false, false, tagVisibility, push, player);
+		sendGlowPacket(entity, glowing, player);
+		if (oldColor != null) {
+			//We never add to NONE, so no need to remove
+			if (oldColor != GlowAPI.Color.NONE) {
+				//use the old color to remove the player from its team
+				sendTeamPacket(entity, oldColor, false, false, tagVisibility, push, player);
+			}
 		}
 		if (glowing) {
 			sendTeamPacket(entity, color, false, color != GlowAPI.Color.NONE, tagVisibility, push, player);
@@ -195,7 +197,7 @@ public class GlowAPI extends JavaPlugin {
 	 * @param color    {@link GlowAPI.Color} of the glow, or <code>null</code> to stop glowing
 	 * @param player {@link Player} that will see the update
 	 */
-	public static void setGlowing(Entity entity, GlowAPI.Color color, Player player) {
+	public static void setGlowing(@Nullable Entity entity, @Nullable GlowAPI.Color color, @NotNull Player player) {
 		setGlowing(entity, color, NameTagVisibility.ALWAYS, TeamPush.ALWAYS, player);
 	}
 
@@ -207,7 +209,7 @@ public class GlowAPI extends JavaPlugin {
 	 * @param player {@link Player} that will see the update
 	 * @see #setGlowing(Entity, GlowAPI.Color, Player)
 	 */
-	public static void setGlowing(Entity entity, boolean glowing, Player player) {
+	public static void setGlowing(@Nullable Entity entity, boolean glowing, @NotNull Player player) {
 		setGlowing(entity, glowing ? GlowAPI.Color.NONE : null, player);
 	}
 
@@ -219,7 +221,7 @@ public class GlowAPI extends JavaPlugin {
 	 * @param players Collection of {@link Player}s that will see the update
 	 * @see #setGlowing(Entity, GlowAPI.Color, Player)
 	 */
-	public static void setGlowing(Entity entity, boolean glowing, Collection<? extends Player> players) {
+	public static void setGlowing(@Nullable Entity entity, boolean glowing, @NotNull Collection<? extends Player> players) {
 		for (Player player : players) {
 			setGlowing(entity, glowing, player);
 		}
@@ -232,7 +234,7 @@ public class GlowAPI extends JavaPlugin {
 	 * @param color     {@link GlowAPI.Color} of the glow, or <code>null</code> to stop glowing
 	 * @param players Collection of {@link Player}s that will see the update
 	 */
-	public static void setGlowing(Entity entity, GlowAPI.Color color, Collection<? extends Player> players) {
+	public static void setGlowing(@Nullable Entity entity, @Nullable GlowAPI.Color color, @NotNull Collection<? extends Player> players) {
 		for (Player player : players) {
 			setGlowing(entity, color, player);
 		}
@@ -245,7 +247,7 @@ public class GlowAPI extends JavaPlugin {
 	 * @param color    {@link GlowAPI.Color} of the glow, or <code>null</code> to stop glowing
 	 * @param player {@link Player} that will see the update
 	 */
-	public static void setGlowing(Collection<? extends Entity> entities, GlowAPI.Color color, Player player) {
+	public static void setGlowing(@NotNull Collection<? extends Entity> entities, @Nullable GlowAPI.Color color, @NotNull Player player) {
 		for (Entity entity : entities) {
 			setGlowing(entity, color, player);
 		}
@@ -258,7 +260,7 @@ public class GlowAPI extends JavaPlugin {
 	 * @param color     {@link GlowAPI.Color} of the glow, or <code>null</code> to stop glowing
 	 * @param players Collection of {@link Player}s that will see the update
 	 */
-	public static void setGlowing(Collection<? extends Entity> entities, GlowAPI.Color color, Collection<? extends Player> players) {
+	public static void setGlowing(@NotNull Collection<? extends Entity> entities, @Nullable GlowAPI.Color color, @NotNull Collection<? extends Player> players) {
 		for (Entity entity : entities) {
 			setGlowing(entity, color, players);
 		}
@@ -271,7 +273,7 @@ public class GlowAPI extends JavaPlugin {
 	 * @param player {@link Player} player to check (as used in the setGlowing methods)
 	 * @return <code>true</code> if the entity appears glowing to the player
 	 */
-	public static boolean isGlowing(Entity entity, Player player) {
+	public static boolean isGlowing(@NotNull Entity entity, @NotNull Player player) {
 		return getGlowColor(entity, player) != null;
 	}
 
@@ -283,7 +285,7 @@ public class GlowAPI extends JavaPlugin {
 	 * @param checkAll  if <code>true</code>, this only returns <code>true</code> if the entity is glowing for all players; if <code>false</code> this returns <code>true</code> if the entity is glowing for any of the players
 	 * @return <code>true</code> if the entity appears glowing to the players
 	 */
-	public static boolean isGlowing(Entity entity, Collection<? extends Player> players, boolean checkAll) {
+	public static boolean isGlowing(@NotNull Entity entity, @NotNull Collection<? extends Player> players, boolean checkAll) {
 		if (checkAll) {
 			boolean glowing = true;
 			for (Player player : players) {
@@ -307,14 +309,14 @@ public class GlowAPI extends JavaPlugin {
 	 * @param player {@link Player} player of the color (as used in the setGlowing methods)
 	 * @return the {@link GlowAPI.Color}, or <code>null</code> if the entity doesn't appear glowing to the player
 	 */
-	public static GlowAPI.Color getGlowColor(Entity entity, Player player) {
+	@Nullable public static GlowAPI.Color getGlowColor(@NotNull Entity entity, @NotNull Player player) {
 		final UUID entityUniqueId = entity.getUniqueId();
 		if (!dataMap.containsKey(entityUniqueId)) return null;
 		GlowData data = dataMap.get(entityUniqueId);
 		return data.colorMap.get(player.getUniqueId());
 	}
 
-	protected static void sendGlowPacket(Entity entity, boolean wasGlowing, boolean glowing, Player player) {
+	protected static void sendGlowPacket(@NotNull Entity entity, boolean glowing, @NotNull Player player) {
 		final PacketContainer packet = new PacketContainer(PacketType.Play.Server.ENTITY_METADATA);
 		final WrapperPlayServerEntityMetadata wrappedPacket = new WrapperPlayServerEntityMetadata(packet);
 		final WrappedDataWatcher.WrappedDataWatcherObject dataWatcherObject = new WrappedDataWatcher.WrappedDataWatcherObject(0, WrappedDataWatcher.Registry.get(Byte.class));
@@ -345,7 +347,7 @@ public class GlowAPI extends JavaPlugin {
 	 * @param tagVisibility visibility of the name-tag (always, hideForOtherTeams, hideForOwnTeam, never)
 	 * @param push          push behaviour (always, pushOtherTeams, pushOwnTeam, never)
 	 */
-	public static void initTeam(Player player, NameTagVisibility tagVisibility, TeamPush push) {
+	public static void initTeam(@NotNull Player player, @NotNull NameTagVisibility tagVisibility, @NotNull TeamPush push) {
 		for (GlowAPI.Color color : GlowAPI.Color.values()) {
 			GlowAPI.sendTeamPacket(null, color, true, false, tagVisibility, push, player);
 		}
@@ -356,7 +358,7 @@ public class GlowAPI extends JavaPlugin {
 	 *
 	 * @param player {@link Player} player
 	 */
-	public static void initTeam(Player player) {
+	public static void initTeam(@NotNull Player player) {
 		initTeam(player, NameTagVisibility.ALWAYS, TeamPush.ALWAYS);
 	}
 
@@ -370,7 +372,7 @@ public class GlowAPI extends JavaPlugin {
 	 * @param push
 	 * @param player
 	 */
-	protected static void sendTeamPacket(Entity entity, GlowAPI.Color color, boolean createNewTeam, boolean addEntity, NameTagVisibility tagVisibility, TeamPush push, Player player) {
+	protected static void sendTeamPacket(@Nullable Entity entity, @NotNull GlowAPI.Color color, boolean createNewTeam, boolean addEntity, @NotNull NameTagVisibility tagVisibility, @NotNull TeamPush push, @NotNull Player player) {
 		final PacketContainer packet = new PacketContainer(PacketType.Play.Server.SCOREBOARD_TEAM);
 		final WrapperPlayServerScoreboardTeam wrappedPacket = new WrapperPlayServerScoreboardTeam(packet);
 
@@ -378,7 +380,7 @@ public class GlowAPI extends JavaPlugin {
 		final String teamName = color.getTeamName();
 
 		wrappedPacket.setPacketMode(packetMode);
-		wrappedPacket.setTeamName(teamName);
+		wrappedPacket.setName(teamName);
 		wrappedPacket.setNameTagVisibility(tagVisibility);
 		wrappedPacket.setTeamPush(push);
 
@@ -389,7 +391,7 @@ public class GlowAPI extends JavaPlugin {
 			wrappedPacket.setTeamSuffix("");
 			wrappedPacket.setAllowFriendlyFire(true);
 			wrappedPacket.setCanSeeFriendlyInvisibles(false);
-		} else {
+		} else if (entity != null) {
 			//Add/remove players
 			String entry;
 			if (entity instanceof OfflinePlayer) {//Players still use the name...
@@ -397,8 +399,8 @@ public class GlowAPI extends JavaPlugin {
 			} else {
 				entry = entity.getUniqueId().toString();
 			}
-			Collection<String> players = wrappedPacket.getPlayers();
-			players.add(entry);
+			Collection<String> entries = wrappedPacket.getEntries();
+			entries.add(entry);
 		}
 
 		final ProtocolManager protocolManager = ProtocolLibrary.getProtocolManager();
@@ -409,7 +411,8 @@ public class GlowAPI extends JavaPlugin {
 		}
 	}
 
-	public static Entity getEntityById(World world, int entityId) {
+	@Nullable
+	public static Entity getEntityById(@NotNull World world, int entityId) {
 		return world
 			.getEntities()
 			.parallelStream()

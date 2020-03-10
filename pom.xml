@@ -123,6 +123,14 @@
             <artifactId>ProtocolLib</artifactId>
             <version>4.5.0</version>
         </dependency>
+
+        <!-- Nullable/NotNull -->
+        <dependency>
+            <groupId>org.jetbrains</groupId>
+            <artifactId>annotations</artifactId>
+            <version>18.0.0</version>
+            <scope>compile</scope>
+        </dependency>
     </dependencies>
 
     <repositories>

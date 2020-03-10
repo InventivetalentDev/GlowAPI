@@ -27,6 +27,8 @@ import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.events.PacketEvent;
 import com.comphenix.protocol.wrappers.WrappedWatchableObject;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 public class WrapperPlayServerEntityMetadata extends AbstractPacket {
     public static final PacketType TYPE = PacketType.Play.Server.ENTITY_METADATA;
@@ -36,7 +38,7 @@ public class WrapperPlayServerEntityMetadata extends AbstractPacket {
         handle.getModifier().writeDefaults();
     }
 
-    public WrapperPlayServerEntityMetadata(PacketContainer packet) {
+    public WrapperPlayServerEntityMetadata(@NotNull PacketContainer packet) {
         super(packet, TYPE);
     }
 
@@ -56,7 +58,7 @@ public class WrapperPlayServerEntityMetadata extends AbstractPacket {
      *
      * @param value - new value.
      */
-    public void setEntityID(int value) {
+    public void setEntityID( int value) {
         handle.getIntegers().write(0, value);
     }
 
@@ -66,7 +68,8 @@ public class WrapperPlayServerEntityMetadata extends AbstractPacket {
      * @param world - the current world of the entity.
      * @return The spawned entity.
      */
-    public Entity getEntity(World world) {
+    @NotNull
+    public Entity getEntity(@NotNull World world) {
         return handle.getEntityModifier(world).read(0);
     }
 
@@ -76,7 +79,8 @@ public class WrapperPlayServerEntityMetadata extends AbstractPacket {
      * @param event - the packet event.
      * @return The spawned entity.
      */
-    public Entity getEntity(PacketEvent event) {
+    @NotNull
+    public Entity getEntity(@NotNull PacketEvent event) {
         return getEntity(event.getPlayer().getWorld());
     }
 
@@ -85,6 +89,7 @@ public class WrapperPlayServerEntityMetadata extends AbstractPacket {
      *
      * @return The current Metadata
      */
+    @Nullable
     public List<WrappedWatchableObject> getMetadata() {
         return handle.getWatchableCollectionModifier().read(0);
     }
@@ -94,7 +99,7 @@ public class WrapperPlayServerEntityMetadata extends AbstractPacket {
      *
      * @param value - new value.
      */
-    public void setMetadata(List<WrappedWatchableObject> value) {
+    public void setMetadata(@NotNull List<WrappedWatchableObject> value) {
         handle.getWatchableCollectionModifier().write(0, value);
     }
 }

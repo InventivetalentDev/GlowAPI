@@ -1,5 +1,8 @@
 package org.inventivetalent.glow;
 
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
@@ -11,7 +14,8 @@ public class GlowData {
 	public Map<UUID, GlowAPI.Color> colorMap = new ConcurrentHashMap<>();
 
 	@Override
-	public boolean equals(Object o) {
+	@NotNull
+	public boolean equals(@Nullable Object o) {
 		if (this == o) return true;
 		if (o == null || getClass() != o.getClass()) return false;
 
@@ -21,7 +25,7 @@ public class GlowData {
 	}
 
 	@Override
-	public int hashCode() {
+	@NotNull public int hashCode() {
 		return colorMap != null ? colorMap.hashCode() : 0;
 	}
 }
