@@ -41,4 +41,4 @@ Version 1.4.7 is intended for 1.13+ only. For older MC versions, please use 1.4.
     </dependencies>
     
 ## API Manager
-API versions lower than 2.0.0 are compatible with [APIManager](https://www.spigotmc.org/resources/api-apimanager.19738/).
+API versions 1.4.11 and below are compatible with [APIManager](https://www.spigotmc.org/resources/api-apimanager.19738/).
