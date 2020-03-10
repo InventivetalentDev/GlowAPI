@@ -55,30 +55,28 @@ public class GlowAPI extends JavaPlugin {
 	 */
 	public enum Color {
 
-		BLACK(ChatColor.BLACK, "0"),
-		DARK_BLUE(ChatColor.DARK_BLUE, "1"),
-		DARK_GREEN(ChatColor.DARK_GREEN, "2"),
-		DARK_AQUA(ChatColor.DARK_AQUA, "3"),
-		DARK_RED(ChatColor.RED, "4"),
-		DARK_PURPLE(ChatColor.DARK_PURPLE, "5"),
-		GOLD(ChatColor.GOLD, "6"),
-		GRAY(ChatColor.GRAY, "7"),
-		DARK_GRAY(ChatColor.DARK_GRAY, "8"),
-		BLUE(ChatColor.BLUE, "9"),
-		GREEN(ChatColor.GREEN, "a"),
-		AQUA(ChatColor.AQUA, "b"),
-		RED(ChatColor.RED, "c"),
-		PURPLE(ChatColor.LIGHT_PURPLE, "d"),
-		YELLOW(ChatColor.YELLOW, "e"),
-		WHITE(ChatColor.WHITE, "f"),
-		NONE(ChatColor.RESET, "");
+		BLACK(ChatColor.BLACK),
+		DARK_BLUE(ChatColor.DARK_BLUE),
+		DARK_GREEN(ChatColor.DARK_GREEN),
+		DARK_AQUA(ChatColor.DARK_AQUA),
+		DARK_RED(ChatColor.DARK_RED),
+		DARK_PURPLE(ChatColor.DARK_PURPLE),
+		GOLD(ChatColor.GOLD),
+		GRAY(ChatColor.GRAY),
+		DARK_GRAY(ChatColor.DARK_GRAY),
+		BLUE(ChatColor.BLUE),
+		GREEN(ChatColor.GREEN),
+		AQUA(ChatColor.AQUA),
+		RED(ChatColor.RED),
+		PURPLE(ChatColor.LIGHT_PURPLE),
+		YELLOW(ChatColor.YELLOW),
+		WHITE(ChatColor.WHITE),
+		NONE(ChatColor.RESET);
 
-		ChatColor packetValue;
-		String colorCode;
+		ChatColor chatColor;
 
-		Color(ChatColor packetValue, String colorCode) {
-			this.packetValue = packetValue;
-			this.colorCode = colorCode;
+		Color(ChatColor chatColor) {
+			this.chatColor = chatColor;
 		}
 
 		String getTeamName() {
@@ -413,8 +411,7 @@ public class GlowAPI extends JavaPlugin {
 		final PacketContainer packet = new PacketContainer(PacketType.Play.Server.SCOREBOARD_TEAM);
 		final WrapperPlayServerScoreboardTeam wrappedPacket = new WrapperPlayServerScoreboardTeam(packet);
 
-		//Mode (0 = create, 3 = add entity, 4 = remove entity)
-		final byte packetMode = (byte) (createNewTeam ? 0 : (addEntity ? 3 : 4));
+		final byte packetMode = (byte) (createNewTeam ? WrapperPlayServerScoreboardTeam.Modes.TEAM_CREATED : (addEntity ? WrapperPlayServerScoreboardTeam.Modes.PLAYERS_ADDED : WrapperPlayServerScoreboardTeam.Modes.PLAYERS_REMOVED));
 		final String teamName = color.getTeamName();
 
 		wrappedPacket.setPacketMode(packetMode);
@@ -425,8 +422,8 @@ public class GlowAPI extends JavaPlugin {
 		*/
 
 		if (createNewTeam) {
-			wrappedPacket.setTeamColor((ChatColor) color.packetValue);
-			wrappedPacket.setTeamPrefix("§" + color.colorCode);
+			wrappedPacket.setTeamColor(color.chatColor);
+			wrappedPacket.setTeamPrefix(color.chatColor.toString());
 			wrappedPacket.setTeamDisplayName(teamName);
 		} else {
 			//Add/remove players
