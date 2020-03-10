@@ -1,8 +1,8 @@
 language: java
 jdk:
-- oraclejdk8
+- openjdk11
 
-script: "mvn deploy --settings settings.xml"
+#script: "mvn deploy --settings settings.xml"
 env:
   global:
   - secure: "X+kVpmQ1mPIviUYUtmn9NsSMYr4ysZUoJ5co3oAM6aE/DbIhbuTsS4mN2SmTIHf6+olvJGr8e4NRvrRgzixCs7ZpraflYC1XHjkxx5fP+F1IA8sIOy+zwTQwiez+v6wrrnqP7+9wJmQpF2qV6bYqC0Fzcl8riBNXzAJ2wFsFujUQ8kdh2+vBDHK4n7oW3YLuqISfSLB5uboOYvQ4RRNT/hyfutdan49/HJIcZn1iH3LbsCfnNtvrja6jLFOloa7D+WNPF3/sQSqLgt6/FrNdOBM+6wvot3D/nsYG9mono56iI2PcUjq6AirKfnpnR1XFcVgYMUjDwzaMtepSY0+H4jVbcGJsfISaumDJh/+q/C3MvsiDluxVj9e7xB4vn4ti+iJS8NZpR9cizhtMnY3WnONOc/yLHoujxy0i/XKMqk7pKX3WkPA8jAVGCXnlr6OLROjVILVbuMrKG4DLqFqiQBnfRZDCLWK1Ka3ymjNXWcf3nyvQQHBPfvrZk1CrRxIfQOLlUBM4/34XjKtH+XBj6xeY0KL0XYzvO7d6cYCV1fVX/fJm1OWjUPc+YtkQgT6kdKra9BJQDqEi2zQI9xGNGwsqO4lhpiaH2hH1pq21aCWqpTrnEYpceZ9bU2Ut7Ej2/woAEK2ubD9tGLwETSsVbu7shmrg/pdRLRredzRLsRM="
