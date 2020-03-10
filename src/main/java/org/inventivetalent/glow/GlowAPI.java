@@ -8,6 +8,8 @@ import com.comphenix.protocol.events.ListenerPriority;
 import com.comphenix.protocol.events.PacketAdapter;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.events.PacketEvent;
+import com.comphenix.protocol.events.PacketListener;
+import com.comphenix.protocol.utility.MinecraftReflection;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher;
 import com.comphenix.protocol.wrappers.WrappedWatchableObject;
 import org.bstats.bukkit.MetricsLite;
@@ -37,18 +39,50 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class GlowAPI extends JavaPlugin {
-
-	// From https://wiki.vg/Entity_metadata#Entity
-	public static final byte ENTITY_ON_FIRE            = (byte) 0x01;
-	public static final byte ENTITY_CROUCHED           = (byte) 0x02;
-	public static final byte ENTITY_RIDING             = (byte) 0x04; // UNUSED
-	public static final byte ENTITY_SPRINTING          = (byte) 0x08;
-	public static final byte ENTITY_SWIMMING           = (byte) 0x10;
-	public static final byte ENTITY_INVISIBLE          = (byte) 0x20;
-	public static final byte ENTITY_GLOWING_EFFECT     = (byte) 0x40;
-	public static final byte ENTITY_FLYING_WITH_ELYTRA = (byte) 0x80;
+	private static final byte ENTITY_GLOWING_EFFECT = (byte) 0x40;
 
 	private static Map<UUID, GlowData> dataMap = new ConcurrentHashMap<>();
+
+	private ProtocolManager protocolManager;
+	private AsynchronousManager asynchronousManager;
+
+	private final PacketListener entityMetadataListener = new PacketAdapter(this,
+																			ListenerPriority.NORMAL,
+																			PacketType.Play.Server.ENTITY_METADATA) {
+		@Override
+		public void onPacketSending(PacketEvent event) {
+			PacketContainer packet = event.getPacket();
+			WrapperPlayServerEntityMetadata wrappedPacket = new WrapperPlayServerEntityMetadata(packet);
+
+			final int entityId = wrappedPacket.getEntityID();
+			if (entityId < 0) {//Our packet
+				//Reset the ID and let it through
+				final int invertedEntityId = -entityId;
+				wrappedPacket.setEntityID(invertedEntityId);
+				return;
+			}
+
+			final List<WrappedWatchableObject> metaData = wrappedPacket.getMetadata();
+			if (metaData == null || metaData.isEmpty()) return;//Nothing to modify
+
+			Player player = event.getPlayer();
+
+			final Entity entity = getEntityById(player.getWorld(), entityId);
+			if (entity == null) return;
+
+			//Check if the entity is glowing
+			if (!GlowAPI.isGlowing(entity, player)) return;
+
+			//Update the DataWatcher Item
+			final WrappedWatchableObject wrappedEntityObj = metaData.get(0);
+			final Object entityObj = wrappedEntityObj.getValue();
+			if (!(entityObj instanceof Byte)) return;
+			byte entityByte = (byte) entityObj;
+			/*Maybe use the isGlowing result*/
+			entityByte = (byte) (entityByte | ENTITY_GLOWING_EFFECT);
+			wrappedEntityObj.setValue(entityByte);
+		}
+	};
 
 	/**
 	 * Team Colors
@@ -67,7 +101,8 @@ public class GlowAPI extends JavaPlugin {
 		GREEN(ChatColor.GREEN),
 		AQUA(ChatColor.AQUA),
 		RED(ChatColor.RED),
-		PURPLE(ChatColor.LIGHT_PURPLE),
+		PURPLE(ChatColor.LIGHT_PURPLE), // Kept for backwards compatibility
+		LIGHT_PURPLE(ChatColor.LIGHT_PURPLE),
 		YELLOW(ChatColor.YELLOW),
 		WHITE(ChatColor.WHITE),
 		NONE(ChatColor.RESET);
@@ -87,6 +122,9 @@ public class GlowAPI extends JavaPlugin {
 		}
 	}
 
+	@NotNull
+	private static GlowAPI getPlugin() { return getPlugin(GlowAPI.class); }
+
 	@Override
 	public void onEnable() {
 		new MetricsLite(this, 2190);
@@ -94,44 +132,18 @@ public class GlowAPI extends JavaPlugin {
 		Bukkit.getPluginManager().registerEvents(new PlayerJoinListener(), this);
 		Bukkit.getPluginManager().registerEvents(new PlayerQuitListener(), this);
 
-		final AsynchronousManager protocolManager = ProtocolLibrary.getProtocolManager().getAsynchronousManager();
-		protocolManager.registerAsyncHandler(new PacketAdapter(this, ListenerPriority.NORMAL, PacketType.Play.Server.ENTITY_METADATA) {
+		protocolManager = ProtocolLibrary.getProtocolManager();
+		asynchronousManager = protocolManager.getAsynchronousManager();
+		asynchronousManager.registerAsyncHandler(entityMetadataListener).syncStart();
+	}
 
-			@Override
-			public void onPacketSending(PacketEvent event) {
-				PacketContainer packet = event.getPacket();
-				WrapperPlayServerEntityMetadata wrappedPacket = new WrapperPlayServerEntityMetadata(packet);
-
-				final int entityId = wrappedPacket.getEntityID();
-				if (entityId < 0) {//Our packet
-					//Reset the ID and let it through
-					final int invertedEntityId = -entityId;
-					wrappedPacket.setEntityID(invertedEntityId);
-					return;
-				}
-
-				final List<WrappedWatchableObject> metaData = wrappedPacket.getMetadata();
-				if (metaData == null || metaData.isEmpty()) return;//Nothing to modify
-
-				Player player = event.getPlayer();
-
-				final Entity entity = getEntityById(player.getWorld(), entityId);
-				if (entity == null) return;
-
-				//Check if the entity is glowing
-				if (!GlowAPI.isGlowing(entity, player)) return;
-
-				//Update the DataWatcher Item
-				final WrappedWatchableObject wrappedEntityObj = metaData.get(0);
-				final Object entityObj = wrappedEntityObj.getValue();
-				if (!(entityObj instanceof Byte)) return;
-				byte entityByte = (byte) entityObj;
-				/*Maybe use the isGlowing result*/
-				entityByte = (byte) (entityByte | ENTITY_GLOWING_EFFECT);
-				wrappedEntityObj.setValue(entityByte);
-			}
-
-		}).syncStart();
+	@Override
+	public void onDisable() {
+		try {
+			asynchronousManager.unregisterAsyncHandler(entityMetadataListener);
+		} catch (java.lang.NullPointerException e) {
+			getLogger().warning("Unable to unregister entityMetadataListener, potential memory leak.");
+		}
 	}
 
 	/**
@@ -182,15 +194,19 @@ public class GlowAPI extends JavaPlugin {
 		if (!player.isOnline()) return;
 
 		sendGlowPacket(entity, glowing, player);
+
+		final boolean createNewTeam = false;
 		if (oldColor != null) {
 			//We never add to NONE, so no need to remove
 			if (oldColor != GlowAPI.Color.NONE) {
+				final boolean addEntity = false;
 				//use the old color to remove the player from its team
-				sendTeamPacket(entity, oldColor, false, false, tagVisibility, push, player);
+				sendTeamPacket(entity, oldColor, createNewTeam, addEntity, tagVisibility, push, player);
 			}
 		}
 		if (glowing) {
-			sendTeamPacket(entity, color, false, color != GlowAPI.Color.NONE, tagVisibility, push, player);
+			final boolean addEntity = color != GlowAPI.Color.NONE;
+			sendTeamPacket(entity, color, createNewTeam, addEntity, tagVisibility, push, player);
 		}
 	}
 
@@ -345,7 +361,9 @@ public class GlowAPI extends JavaPlugin {
 
 		final int invertedEntityId = -entity.getEntityId();
 
-		byte entityByte = 0x00;
+		final WrappedDataWatcher dataWatcher = WrappedDataWatcher.getEntityWatcher(entity);
+		final List<WrappedWatchableObject> dataWatcherObjects = dataWatcher.getWatchableObjects();
+		byte entityByte = (dataWatcherObjects.isEmpty()) ? 0x00 : (byte) dataWatcherObjects.get(0).getValue();
 		entityByte = (byte) (glowing ? (entityByte | ENTITY_GLOWING_EFFECT) : (entityByte & ~ENTITY_GLOWING_EFFECT));
 
 		final WrappedWatchableObject wrappedMetadata = new WrappedWatchableObject(dataWatcherObject, entityByte);
@@ -354,9 +372,8 @@ public class GlowAPI extends JavaPlugin {
 		wrappedPacket.setEntityID(invertedEntityId);
 		wrappedPacket.setMetadata(metadata);
 
-		final ProtocolManager protocolManager = ProtocolLibrary.getProtocolManager();
 		try {
-			protocolManager.sendServerPacket(player, packet);
+			GlowAPI.getPlugin().protocolManager.sendServerPacket(player, packet);
 		} catch (InvocationTargetException e) {
 			throw new RuntimeException("Unable to send packet " + packet.toString() + " to player " + player.toString(), e);
 		}
@@ -435,9 +452,8 @@ public class GlowAPI extends JavaPlugin {
 			entries.add(entry);
 		}
 
-		final ProtocolManager protocolManager = ProtocolLibrary.getProtocolManager();
 		try {
-			protocolManager.sendServerPacket(player, packet);
+			GlowAPI.getPlugin().protocolManager.sendServerPacket(player, packet);
 		} catch (InvocationTargetException e) {
 			throw new RuntimeException("Unable to send packet " + packet.toString() + " to player " + player.toString(), e);
 		}
