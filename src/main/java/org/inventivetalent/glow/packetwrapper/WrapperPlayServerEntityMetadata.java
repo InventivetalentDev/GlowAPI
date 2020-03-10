@@ -29,8 +29,7 @@ import com.comphenix.protocol.events.PacketEvent;
 import com.comphenix.protocol.wrappers.WrappedWatchableObject;
 
 public class WrapperPlayServerEntityMetadata extends AbstractPacket {
-    public static final PacketType TYPE =
-            PacketType.Play.Server.ENTITY_METADATA;
+    public static final PacketType TYPE = PacketType.Play.Server.ENTITY_METADATA;
 
     public WrapperPlayServerEntityMetadata() {
         super(new PacketContainer(TYPE), TYPE);

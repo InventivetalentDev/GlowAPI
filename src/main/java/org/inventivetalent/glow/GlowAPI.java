@@ -22,9 +22,17 @@ import org.inventivetalent.glow.listeners.PlayerJoinListener;
 import org.inventivetalent.glow.listeners.PlayerQuitListener;
 import org.inventivetalent.glow.packetwrapper.WrapperPlayServerEntityMetadata;
 import org.inventivetalent.glow.packetwrapper.WrapperPlayServerScoreboardTeam;
+import org.inventivetalent.glow.packetwrapper.WrapperPlayServerScoreboardTeam.Modes;
+import org.inventivetalent.glow.packetwrapper.WrapperPlayServerScoreboardTeam.NameTagVisibility;
+import org.inventivetalent.glow.packetwrapper.WrapperPlayServerScoreboardTeam.TeamPush;
 
 import java.lang.reflect.InvocationTargetException;
-import java.util.*;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class GlowAPI extends JavaPlugin {
 
@@ -38,7 +46,7 @@ public class GlowAPI extends JavaPlugin {
 	public static final byte ENTITY_GLOWING_EFFECT     = (byte) 0x40;
 	public static final byte ENTITY_FLYING_WITH_ELYTRA = (byte) 0x80;
 
-	private static Map<UUID, GlowData> dataMap = new HashMap<>();
+	private static Map<UUID, GlowData> dataMap = new ConcurrentHashMap<>();
 	static boolean isPaper = false;
 
 	static {
@@ -54,7 +62,6 @@ public class GlowAPI extends JavaPlugin {
 	 * Team Colors
 	 */
 	public enum Color {
-
 		BLACK(ChatColor.BLACK),
 		DARK_BLUE(ChatColor.DARK_BLUE),
 		DARK_GREEN(ChatColor.DARK_GREEN),
@@ -85,40 +92,6 @@ public class GlowAPI extends JavaPlugin {
 				name = name.substring(0, 16);
 			}
 			return name;
-		}
-	}
-
-	/**
-	 * Team Push
-	 */
-	public enum TeamPush {
-
-		ALWAYS("always"),
-		PUSH_OTHER_TEAMS("pushOtherTeams"),
-		PUSH_OWN_TEAM("pushOwnTeam"),
-		NEVER("never");
-
-		String collisionRule;
-
-		TeamPush(String collisionRule) {
-			this.collisionRule = collisionRule;
-		}
-	}
-
-	/**
-	 * Team Nametag Visibility
-	 */
-	public enum NameTagVisibility {
-
-		ALWAYS("always"),
-		HIDE_FOR_OTHER_TEAMS("hideForOtherTeams"),
-		HIDE_FOR_OWN_TEAM("hideForOwnTeam"),
-		NEVER("never");
-
-		String nameTagVisibility;
-
-		NameTagVisibility(String nameTagVisibility) {
-			this.nameTagVisibility = nameTagVisibility;
 		}
 	}
 
@@ -411,20 +384,21 @@ public class GlowAPI extends JavaPlugin {
 		final PacketContainer packet = new PacketContainer(PacketType.Play.Server.SCOREBOARD_TEAM);
 		final WrapperPlayServerScoreboardTeam wrappedPacket = new WrapperPlayServerScoreboardTeam(packet);
 
-		final byte packetMode = (byte) (createNewTeam ? WrapperPlayServerScoreboardTeam.Modes.TEAM_CREATED : (addEntity ? WrapperPlayServerScoreboardTeam.Modes.PLAYERS_ADDED : WrapperPlayServerScoreboardTeam.Modes.PLAYERS_REMOVED));
+		final Modes packetMode = (createNewTeam ? Modes.TEAM_CREATED : (addEntity ? Modes.PLAYERS_ADDED : Modes.PLAYERS_REMOVED));
 		final String teamName = color.getTeamName();
 
 		wrappedPacket.setPacketMode(packetMode);
 		wrappedPacket.setTeamName(teamName);
-		/*
 		wrappedPacket.setNameTagVisibility(tagVisibility);
 		wrappedPacket.setTeamPush(push);
-		*/
 
 		if (createNewTeam) {
 			wrappedPacket.setTeamColor(color.chatColor);
 			wrappedPacket.setTeamPrefix(color.chatColor.toString());
 			wrappedPacket.setTeamDisplayName(teamName);
+			wrappedPacket.setTeamSuffix("");
+			wrappedPacket.setAllowFriendlyFire(true);
+			wrappedPacket.setCanSeeFriendlyInvisibles(false);
 		} else {
 			//Add/remove players
 			String entry;

@@ -17,37 +17,73 @@
 
 package org.inventivetalent.glow.packetwrapper;
 
+import java.util.Arrays;
 import java.util.Collection;
 
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.events.PacketContainer;
-import com.comphenix.protocol.reflect.IntEnum;
 import com.comphenix.protocol.utility.MinecraftReflection;
+import com.comphenix.protocol.wrappers.WrappedChatComponent;
 import org.bukkit.ChatColor;
 
 public class WrapperPlayServerScoreboardTeam extends AbstractPacket {
-    public static final Class<?> EnumChatFormat = MinecraftReflection.getMinecraftClass("EnumChatFormat");
-    public static final Class<?> ScoreboardTeamBase = MinecraftReflection.getMinecraftClass("ScoreboardTeamBase");
-
     public static final PacketType TYPE = PacketType.Play.Server.SCOREBOARD_TEAM;
-    
+
+    public static final Class<?> EnumChatFormat = MinecraftReflection.getMinecraftClass("EnumChatFormat");
+
+    private static byte ALLOW_FRIENDLY_FIRE = 0x01;
+    private static byte CAN_SEE_FRIENDLY_INVISIBLES = 0x02;
+
     /**
      * Enumeration of all the known packet modes.
      * 
      * @author Kristian
      */
-    public static class Modes extends IntEnum {
-    	public static final int TEAM_CREATED = 0;
-    	public static final int TEAM_REMOVED = 1;
-    	public static final int TEAM_UPDATED = 2;
-    	public static final int PLAYERS_ADDED = 3;
-    	public static final int PLAYERS_REMOVED = 4;
-    	
-    	private static final Modes INSTANCE = new Modes();
-    	
-    	public static Modes getInstance() {
-    		return INSTANCE;
-    	}
+    public enum Modes {
+        TEAM_CREATED(0),
+        TEAM_REMOVED(1),
+        TEAM_UPDATED(2),
+        PLAYERS_ADDED(3),
+        PLAYERS_REMOVED(4);
+
+        int packetMode;
+
+        public static Modes valueOf(int packetMode) {
+            return Arrays.stream(Modes.values())
+                .filter(modes -> modes.packetMode == packetMode)
+                .findAny()
+                .orElse(null);
+        }
+
+        Modes(int packetMode) {
+            this.packetMode = packetMode;
+        }
+    }
+
+    public enum TeamPush {
+        ALWAYS("always"),
+        PUSH_OTHER_TEAMS("pushOtherTeams"),
+        PUSH_OWN_TEAM("pushOwnTeam"),
+        NEVER("never");
+
+        String collisionRule;
+
+        TeamPush(String collisionRule) {
+            this.collisionRule = collisionRule;
+        }
+    }
+
+    public enum NameTagVisibility {
+        ALWAYS("always"),
+        HIDE_FOR_OTHER_TEAMS("hideForOtherTeams"),
+        HIDE_FOR_OWN_TEAM("hideForOwnTeam"),
+        NEVER("never");
+
+        String nameTagVisibility;
+
+        NameTagVisibility(String nameTagVisibility) {
+            this.nameTagVisibility = nameTagVisibility;
+        }
     }
     
     public WrapperPlayServerScoreboardTeam() {
@@ -81,8 +117,8 @@ public class WrapperPlayServerScoreboardTeam extends AbstractPacket {
      * This determines whether or not team information is added or removed.
      * @return The current packet mode.
     */
-    public byte getPacketMode() {
-        return handle.getIntegers().read(0).byteValue();
+    public Modes getPacketMode() {
+        return Modes.valueOf(handle.getIntegers().read(0));
     }
     
     /**
@@ -91,8 +127,8 @@ public class WrapperPlayServerScoreboardTeam extends AbstractPacket {
      * This determines whether or not team information is added or removed.
      * @param value - new value.
     */
-    public void setPacketMode(byte value) {
-        handle.getIntegers().write(0, (int) value);
+    public void setPacketMode(Modes value) {
+        handle.getIntegers().write(0, value.packetMode);
     }
     
     /**
@@ -102,7 +138,7 @@ public class WrapperPlayServerScoreboardTeam extends AbstractPacket {
      * @return The current display name.
     */
     public String getTeamDisplayName() {
-        return handle.getStrings().read(1);
+        return handle.getChatComponents().read(0).toString();
     }
     
     /**
@@ -112,7 +148,7 @@ public class WrapperPlayServerScoreboardTeam extends AbstractPacket {
      * @param value - new value.
     */
     public void setTeamDisplayName(String value) {
-    	handle.getStrings().write(1, value);
+        handle.getChatComponents().write(0, WrappedChatComponent.fromText(value));
     }
     
     /**
@@ -122,7 +158,7 @@ public class WrapperPlayServerScoreboardTeam extends AbstractPacket {
      * @return The current Team Prefix
     */
     public String getTeamPrefix() {
-        return handle.getStrings().read(2);
+        return handle.getChatComponents().read(1).toString();
     }
     
     /**
@@ -132,27 +168,70 @@ public class WrapperPlayServerScoreboardTeam extends AbstractPacket {
      * @param value - new value.
     */
     public void setTeamPrefix(String value) {
-        handle.getStrings().write(2, value);
+        handle.getChatComponents().write(1, WrappedChatComponent.fromText(value));
     }
-    
+    /**
+     * Retrieve the team suffix. This will be inserted after the name of each team member.
+     * <p>
+     * A team must be created or updated.
+     * @return The current Team Suffix
+     */
+    public String getTeamSuffix() {
+        return handle.getChatComponents().read(2).toString();
+    }
+
+    /**
+     * Set the team suffix. This will be inserted after the name of each team member.
+     * <p>
+     * A team must be created or updated.
+     * @param value - new value.
+     */
+    public void setTeamSuffix(String value) {
+        handle.getChatComponents().write(2, WrappedChatComponent.fromText(value));
+    }
+
     /**
      * Retrieve whether or not friendly fire is enabled.
      * <p>
      * A team must be created or updated.
      * @return The current Friendly fire
-    */
-    public byte getFriendlyFire() {
-        return handle.getIntegers().read(1).byteValue();
+     */
+    public boolean getAllowFriendlyFire() {
+        return ((handle.getIntegers().read(1).byteValue() & 0x01) != 0);
     }
-    
+
     /**
      * Set whether or not friendly fire is enabled.
      * <p>
      * A team must be created or updated.
      * @param value - new value.
-    */
-    public void setFriendlyFire(byte value) {
-    	handle.getIntegers().write(1, (int) value);
+     */
+    public void setAllowFriendlyFire(boolean value) {
+        int packOptionData = handle.getIntegers().read(1);
+        packOptionData = value ? (packOptionData | 0x01) : (packOptionData & ~0x01);
+        handle.getIntegers().write(1, (int) packOptionData);
+    }
+
+    /**
+     * Retrieve whether or not friendly invisibles can be seen.
+     * <p>
+     * A team must be created or updated.
+     * @return The current Friendly fire
+     */
+    public boolean getCanSeeFriendlyInvisibles() {
+        return ((handle.getIntegers().read(1).byteValue() & 0x02) != 0);
+    }
+
+    /**
+     * Set whether or not friendly invisibles can be seen.
+     * <p>
+     * A team must be created or updated.
+     * @param value - new value.
+     */
+    public void setCanSeeFriendlyInvisibles(boolean value) {
+        int packOptionData = handle.getIntegers().read(1);
+        packOptionData = value ? (packOptionData | 0x02) : (packOptionData & ~0x02);
+        handle.getIntegers().write(1, (int) packOptionData);
     }
     
     /**
@@ -206,21 +285,19 @@ public class WrapperPlayServerScoreboardTeam extends AbstractPacket {
         handle.getEnumModifier(ChatColor.class, EnumChatFormat).write(0, value);
     }
 
-    /*
-    public GlowAPI.TeamPush getTeamPush() {
-        return handle.getEnumModifier(GlowAPI.TeamPush.class, MinecraftReflection.getMinecraftClass("ScoreboardTeamBase.EnumTeamPush")).read(0);
+    public TeamPush getTeamPush() {
+        return TeamPush.valueOf(handle.getStrings().read(1));
     }
 
-    public void setTeamPush(GlowAPI.TeamPush value) {
-        handle.getEnumModifier(GlowAPI.TeamPush.class, MinecraftReflection.getMinecraftClass("ScoreboardTeamBase.EnumTeamPush")).write(0, value);
+    public void setTeamPush(TeamPush value) {
+        handle.getStrings().write(1, value.toString());
     }
 
-    public GlowAPI.NameTagVisibility getNameTagVisibility() {
-        return handle.getEnumModifier(GlowAPI.NameTagVisibility.class, MinecraftReflection.getMinecraftClass("ScoreboardTeamBase.EnumNameTagVisibility")).read(0);
+    public NameTagVisibility getNameTagVisibility() {
+        return NameTagVisibility.valueOf(handle.getStrings().read(2));
     }
 
-    public void setNameTagVisibility(GlowAPI.NameTagVisibility value) {
-        handle.getEnumModifier(GlowAPI.NameTagVisibility.class, MinecraftReflection.getMinecraftClass("ScoreboardTeamBase.EnumNameTagVisibility")).write(0, value);
+    public void setNameTagVisibility(NameTagVisibility value) {
+        handle.getStrings().write(2, value.toString());
     }
-    */
 }
