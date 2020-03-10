@@ -47,16 +47,6 @@ public class GlowAPI extends JavaPlugin {
 	public static final byte ENTITY_FLYING_WITH_ELYTRA = (byte) 0x80;
 
 	private static Map<UUID, GlowData> dataMap = new ConcurrentHashMap<>();
-	static boolean isPaper = false;
-
-	static {
-		try {
-			Class.forName("com.destroystokyo.paper.PaperConfig");
-			isPaper = true;
-		} catch (Exception ignored) {
-			isPaper = false;
-		}
-	}
 
 	/**
 	 * Team Colors
