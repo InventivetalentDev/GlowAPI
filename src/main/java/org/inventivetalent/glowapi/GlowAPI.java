@@ -346,8 +346,9 @@ public class GlowAPI extends JavaPlugin {
 	 * @return the {@link GlowAPI.Color}, or <code>null</code> if the entity doesn't appear glowing to the player
 	 */
 	public static GlowAPI.Color getGlowColor(Entity entity, Player player) {
-		if (!dataMap.containsKey(entity.getUniqueId())) { return null; }
-		GlowData data = dataMap.get(entity.getUniqueId());
+		final UUID entityUniqueId = entity.getUniqueId();
+		if (!dataMap.containsKey(entityUniqueId)) return null;
+		GlowData data = dataMap.get(entityUniqueId);
 		return data.colorMap.get(player.getUniqueId());
 	}
 
@@ -447,11 +448,12 @@ public class GlowAPI extends JavaPlugin {
 	}
 
 	public static Entity getEntityById(World world, int entityId) {
-		for (Entity entity : world.getEntities()) {
-			if (entity.getEntityId() != entityId) continue;
-			return entity;
-		}
-		return null;
+		return world
+			.getEntities()
+			.parallelStream()
+			.filter(entity -> entity.getEntityId() == entityId)
+			.findAny()
+			.orElse(null);
 	}
 
 }
