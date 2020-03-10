@@ -7,7 +7,6 @@ import com.comphenix.protocol.events.ListenerPriority;
 import com.comphenix.protocol.events.PacketAdapter;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.events.PacketEvent;
-import com.comphenix.protocol.utility.MinecraftReflection;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher;
 import com.comphenix.protocol.wrappers.WrappedWatchableObject;
 import org.bstats.bukkit.MetricsLite;
@@ -18,7 +17,6 @@ import org.bukkit.World;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.scoreboard.Team;
 import org.inventivetalent.glowapi.listeners.PlayerJoinListener;
 import org.inventivetalent.glowapi.listeners.PlayerQuitListener;
 import org.inventivetalent.glowapi.packetwrapper.WrapperPlayServerEntityMetadata;
@@ -147,7 +145,8 @@ public class GlowAPI extends JavaPlugin {
 				final int entityId = wrappedPacket.getEntityID();
 				if (entityId < 0) {//Our packet
 					//Reset the ID and let it through
-					wrappedPacket.setEntityID(-entityId);
+					final int invertedEntityId = -entityId;
+					wrappedPacket.setEntityID(invertedEntityId);
 					return;
 				}
 
@@ -156,23 +155,20 @@ public class GlowAPI extends JavaPlugin {
 
 				Player player = event.getPlayer();
 
-				Entity entity = getEntityById(player.getWorld(), entityId);
+				final Entity entity = getEntityById(player.getWorld(), entityId);
 				if (entity == null) return;
 
 				//Check if the entity is glowing
 				if (!GlowAPI.isGlowing(entity, player)) return;
 
 				//Update the DataWatcher Item
-				//Object prevItem = b.get(0);
-				for (WrappedWatchableObject prevItem : metaData) {
-					Object prevObj = prevItem.getValue();
-					if (prevObj instanceof Byte) {
-						byte prev = (byte) prevObj;
-						/*Maybe use the isGlowing result*/
-						byte bte = (byte) ((prev | ENTITY_GLOWING_EFFECT));
-						prevItem.setValue(bte);
-					}
-				}
+				final WrappedWatchableObject wrappedEntityObj = metaData.get(0);
+				final Object entityObj = wrappedEntityObj.getValue();
+				if (!(entityObj instanceof Byte)) return;
+				byte entityByte = (byte) entityObj;
+				/*Maybe use the isGlowing result*/
+				entityByte = (byte) (entityByte | ENTITY_GLOWING_EFFECT);
+				wrappedEntityObj.setValue(entityByte);
 			}
 
 		});
@@ -185,47 +181,48 @@ public class GlowAPI extends JavaPlugin {
 	 * @param color         {@link GlowAPI.Color} of the glow, or <code>null</code> to stop glowing
 	 * @param tagVisibility visibility of the name-tag (always, hideForOtherTeams, hideForOwnTeam, never)
 	 * @param push          push behaviour (always, pushOtherTeams, pushOwnTeam, never)
-	 * @param receiver      {@link Player} that will see the update
+	 * @param player      {@link Player} that will see the update
 	 */
-	public static void setGlowing(Entity entity, GlowAPI.Color color, NameTagVisibility tagVisibility, TeamPush push, Player receiver) {
-		if (receiver == null) { return; }
+	public static void setGlowing(Entity entity, GlowAPI.Color color, NameTagVisibility tagVisibility, TeamPush push, Player player) {
+		if (player == null) return;
 
 		boolean glowing = color != null;
-		if (entity == null) { glowing = false; }
+		if (entity == null) glowing = false;
 		if (entity instanceof OfflinePlayer) {
-			if (!((OfflinePlayer) entity).isOnline()) { glowing = false; }
+			if (!((OfflinePlayer) entity).isOnline()) glowing = false;
 		}
 
-		boolean wasGlowing = dataMap.containsKey(entity != null ? entity.getUniqueId() : null);
-		GlowData glowData;
-		if (wasGlowing && entity != null) { glowData = dataMap.get(entity.getUniqueId()); } else { glowData = new GlowData(); }
-
-		GlowAPI.Color oldColor = wasGlowing ? glowData.colorMap.get(receiver.getUniqueId()) : null;
+		final UUID entityUniqueId = (entity == null) ? null : entity.getUniqueId();
+		final boolean wasGlowing = dataMap.containsKey(entityUniqueId);
+		final GlowData glowData = (wasGlowing && entity != null) ? dataMap.get(entityUniqueId) : new GlowData();
+		final UUID playerUniqueId = player.getUniqueId();
+		final GlowAPI.Color oldColor = wasGlowing ? glowData.colorMap.get(playerUniqueId) : null;
 
 		if (glowing) {
-			glowData.colorMap.put(receiver.getUniqueId(), color);
+			glowData.colorMap.put(playerUniqueId, color);
 		} else {
-			glowData.colorMap.remove(receiver.getUniqueId());
+			glowData.colorMap.remove(playerUniqueId);
 		}
+
 		if (glowData.colorMap.isEmpty()) {
-			dataMap.remove(entity != null ? entity.getUniqueId() : null);
+			dataMap.remove(entityUniqueId);
 		} else {
-			if (entity != null) {
-				dataMap.put(entity.getUniqueId(), glowData);
-			}
+			if (entity != null) dataMap.put(entityUniqueId, glowData);
 		}
 
-		if (color != null && oldColor == color) { return; }
-		if (entity == null) { return; }
-		if (entity instanceof OfflinePlayer) { if (!((OfflinePlayer) entity).isOnline()) { return; } }
-		if (!receiver.isOnline()) { return; }
+		if (color != null && oldColor == color) return;
+		if (entity == null) return;
+		if (entity instanceof OfflinePlayer) {
+			if (!((OfflinePlayer) entity).isOnline()) return;
+		}
+		if (!player.isOnline()) return;
 
-		sendGlowPacket(entity, wasGlowing, glowing, receiver);
+		sendGlowPacket(entity, wasGlowing, glowing, player);
 		if (oldColor != null && oldColor != GlowAPI.Color.NONE/*We never add to NONE, so no need to remove*/) {
-			sendTeamPacket(entity, oldColor/*use the old color to remove the player from its team*/, false, false, tagVisibility, push, receiver);
+			sendTeamPacket(entity, oldColor/*use the old color to remove the player from its team*/, false, false, tagVisibility, push, player);
 		}
 		if (glowing) {
-			sendTeamPacket(entity, color, false, color != GlowAPI.Color.NONE, tagVisibility, push, receiver);
+			sendTeamPacket(entity, color, false, color != GlowAPI.Color.NONE, tagVisibility, push, player);
 		}
 	}
 
@@ -234,10 +231,10 @@ public class GlowAPI extends JavaPlugin {
 	 *
 	 * @param entity   {@link Entity} to update
 	 * @param color    {@link GlowAPI.Color} of the glow, or <code>null</code> to stop glowing
-	 * @param receiver {@link Player} that will see the update
+	 * @param player {@link Player} that will see the update
 	 */
-	public static void setGlowing(Entity entity, GlowAPI.Color color, Player receiver) {
-		setGlowing(entity, color, NameTagVisibility.ALWAYS, TeamPush.ALWAYS, receiver);
+	public static void setGlowing(Entity entity, GlowAPI.Color color, Player player) {
+		setGlowing(entity, color, NameTagVisibility.ALWAYS, TeamPush.ALWAYS, player);
 	}
 
 	/**
@@ -245,11 +242,11 @@ public class GlowAPI extends JavaPlugin {
 	 *
 	 * @param entity   {@link Entity} to update
 	 * @param glowing  whether the entity is glowing or not
-	 * @param receiver {@link Player} that will see the update
+	 * @param player {@link Player} that will see the update
 	 * @see #setGlowing(Entity, GlowAPI.Color, Player)
 	 */
-	public static void setGlowing(Entity entity, boolean glowing, Player receiver) {
-		setGlowing(entity, glowing ? GlowAPI.Color.NONE : null, receiver);
+	public static void setGlowing(Entity entity, boolean glowing, Player player) {
+		setGlowing(entity, glowing ? GlowAPI.Color.NONE : null, player);
 	}
 
 	/**
@@ -257,12 +254,12 @@ public class GlowAPI extends JavaPlugin {
 	 *
 	 * @param entity    {@link Entity} to update
 	 * @param glowing   whether the entity is glowing or not
-	 * @param receivers Collection of {@link Player}s that will see the update
+	 * @param players Collection of {@link Player}s that will see the update
 	 * @see #setGlowing(Entity, GlowAPI.Color, Player)
 	 */
-	public static void setGlowing(Entity entity, boolean glowing, Collection<? extends Player> receivers) {
-		for (Player receiver : receivers) {
-			setGlowing(entity, glowing, receiver);
+	public static void setGlowing(Entity entity, boolean glowing, Collection<? extends Player> players) {
+		for (Player player : players) {
+			setGlowing(entity, glowing, player);
 		}
 	}
 
@@ -271,11 +268,11 @@ public class GlowAPI extends JavaPlugin {
 	 *
 	 * @param entity    {@link Entity} to update
 	 * @param color     {@link GlowAPI.Color} of the glow, or <code>null</code> to stop glowing
-	 * @param receivers Collection of {@link Player}s that will see the update
+	 * @param players Collection of {@link Player}s that will see the update
 	 */
-	public static void setGlowing(Entity entity, GlowAPI.Color color, Collection<? extends Player> receivers) {
-		for (Player receiver : receivers) {
-			setGlowing(entity, color, receiver);
+	public static void setGlowing(Entity entity, GlowAPI.Color color, Collection<? extends Player> players) {
+		for (Player player : players) {
+			setGlowing(entity, color, player);
 		}
 	}
 
@@ -284,11 +281,11 @@ public class GlowAPI extends JavaPlugin {
 	 *
 	 * @param entities Collection of {@link Entity} to update
 	 * @param color    {@link GlowAPI.Color} of the glow, or <code>null</code> to stop glowing
-	 * @param receiver {@link Player} that will see the update
+	 * @param player {@link Player} that will see the update
 	 */
-	public static void setGlowing(Collection<? extends Entity> entities, GlowAPI.Color color, Player receiver) {
+	public static void setGlowing(Collection<? extends Entity> entities, GlowAPI.Color color, Player player) {
 		for (Entity entity : entities) {
-			setGlowing(entity, color, receiver);
+			setGlowing(entity, color, player);
 		}
 	}
 
@@ -297,11 +294,11 @@ public class GlowAPI extends JavaPlugin {
 	 *
 	 * @param entities  Collection of {@link Entity} to update
 	 * @param color     {@link GlowAPI.Color} of the glow, or <code>null</code> to stop glowing
-	 * @param receivers Collection of {@link Player}s that will see the update
+	 * @param players Collection of {@link Player}s that will see the update
 	 */
-	public static void setGlowing(Collection<? extends Entity> entities, GlowAPI.Color color, Collection<? extends Player> receivers) {
+	public static void setGlowing(Collection<? extends Entity> entities, GlowAPI.Color color, Collection<? extends Player> players) {
 		for (Entity entity : entities) {
-			setGlowing(entity, color, receivers);
+			setGlowing(entity, color, players);
 		}
 	}
 
@@ -309,33 +306,33 @@ public class GlowAPI extends JavaPlugin {
 	 * Check if an entity is glowing
 	 *
 	 * @param entity   {@link Entity} to check
-	 * @param receiver {@link Player} receiver to check (as used in the setGlowing methods)
+	 * @param player {@link Player} player to check (as used in the setGlowing methods)
 	 * @return <code>true</code> if the entity appears glowing to the player
 	 */
-	public static boolean isGlowing(Entity entity, Player receiver) {
-		return getGlowColor(entity, receiver) != null;
+	public static boolean isGlowing(Entity entity, Player player) {
+		return getGlowColor(entity, player) != null;
 	}
 
 	/**
 	 * Checks if an entity is glowing
 	 *
 	 * @param entity    {@link Entity} to check
-	 * @param receivers Collection of {@link Player} receivers to check
-	 * @param checkAll  if <code>true</code>, this only returns <code>true</code> if the entity is glowing for all receivers; if <code>false</code> this returns <code>true</code> if the entity is glowing for any of the receivers
+	 * @param players Collection of {@link Player} players to check
+	 * @param checkAll  if <code>true</code>, this only returns <code>true</code> if the entity is glowing for all players; if <code>false</code> this returns <code>true</code> if the entity is glowing for any of the players
 	 * @return <code>true</code> if the entity appears glowing to the players
 	 */
-	public static boolean isGlowing(Entity entity, Collection<? extends Player> receivers, boolean checkAll) {
+	public static boolean isGlowing(Entity entity, Collection<? extends Player> players, boolean checkAll) {
 		if (checkAll) {
 			boolean glowing = true;
-			for (Player receiver : receivers) {
-				if (!isGlowing(entity, receiver)) {
+			for (Player player : players) {
+				if (!isGlowing(entity, player)) {
 					glowing = false;
 				}
 			}
 			return glowing;
 		} else {
-			for (Player receiver : receivers) {
-				if (isGlowing(entity, receiver)) { return true; }
+			for (Player player : players) {
+				if (isGlowing(entity, player)) { return true; }
 			}
 		}
 		return false;
@@ -345,16 +342,16 @@ public class GlowAPI extends JavaPlugin {
 	 * Get the glow-color of an entity
 	 *
 	 * @param entity   {@link Entity} to get the color for
-	 * @param receiver {@link Player} receiver of the color (as used in the setGlowing methods)
+	 * @param player {@link Player} player of the color (as used in the setGlowing methods)
 	 * @return the {@link GlowAPI.Color}, or <code>null</code> if the entity doesn't appear glowing to the player
 	 */
-	public static GlowAPI.Color getGlowColor(Entity entity, Player receiver) {
+	public static GlowAPI.Color getGlowColor(Entity entity, Player player) {
 		if (!dataMap.containsKey(entity.getUniqueId())) { return null; }
 		GlowData data = dataMap.get(entity.getUniqueId());
-		return data.colorMap.get(receiver.getUniqueId());
+		return data.colorMap.get(player.getUniqueId());
 	}
 
-	protected static void sendGlowPacket(Entity entity, boolean wasGlowing, boolean glowing, Player receiver) {
+	protected static void sendGlowPacket(Entity entity, boolean wasGlowing, boolean glowing, Player player) {
 		final PacketContainer packet = new PacketContainer(PacketType.Play.Server.ENTITY_METADATA);
 		final WrapperPlayServerEntityMetadata wrappedPacket = new WrapperPlayServerEntityMetadata(packet);
 		final WrappedDataWatcher.WrappedDataWatcherObject dataWatcherObject = new WrappedDataWatcher.WrappedDataWatcherObject(0, WrappedDataWatcher.Registry.get(Byte.class));
@@ -372,32 +369,32 @@ public class GlowAPI extends JavaPlugin {
 
 		final ProtocolManager protocolManager = ProtocolLibrary.getProtocolManager();
 		try {
-			protocolManager.sendServerPacket(receiver, packet);
+			protocolManager.sendServerPacket(player, packet);
 		} catch (InvocationTargetException e) {
-			throw new RuntimeException("Unable to send packet " + packet.toString() + " to player " + receiver.toString(), e);
+			throw new RuntimeException("Unable to send packet " + packet.toString() + " to player " + player.toString(), e);
 		}
 	}
 
 	/**
 	 * Initializes the teams for a player
 	 *
-	 * @param receiver      {@link Player} receiver
+	 * @param player      {@link Player} player
 	 * @param tagVisibility visibility of the name-tag (always, hideForOtherTeams, hideForOwnTeam, never)
 	 * @param push          push behaviour (always, pushOtherTeams, pushOwnTeam, never)
 	 */
-	public static void initTeam(Player receiver, NameTagVisibility tagVisibility, TeamPush push) {
+	public static void initTeam(Player player, NameTagVisibility tagVisibility, TeamPush push) {
 		for (GlowAPI.Color color : GlowAPI.Color.values()) {
-			GlowAPI.sendTeamPacket(null, color, true, false, tagVisibility, push, receiver);
+			GlowAPI.sendTeamPacket(null, color, true, false, tagVisibility, push, player);
 		}
 	}
 
 	/**
 	 * Initializes the teams for a player
 	 *
-	 * @param receiver {@link Player} receiver
+	 * @param player {@link Player} player
 	 */
-	public static void initTeam(Player receiver) {
-		initTeam(receiver, NameTagVisibility.ALWAYS, TeamPush.ALWAYS);
+	public static void initTeam(Player player) {
+		initTeam(player, NameTagVisibility.ALWAYS, TeamPush.ALWAYS);
 	}
 
 	/**
@@ -408,9 +405,9 @@ public class GlowAPI extends JavaPlugin {
 	 * @param addEntity - true->add the entity, false->remove the entity
 	 * @param tagVisibility
 	 * @param push
-	 * @param receiver
+	 * @param player
 	 */
-	protected static void sendTeamPacket(Entity entity, GlowAPI.Color color, boolean createNewTeam, boolean addEntity, NameTagVisibility tagVisibility, TeamPush push, Player receiver) {
+	protected static void sendTeamPacket(Entity entity, GlowAPI.Color color, boolean createNewTeam, boolean addEntity, NameTagVisibility tagVisibility, TeamPush push, Player player) {
 		final PacketContainer packet = new PacketContainer(PacketType.Play.Server.SCOREBOARD_TEAM);
 		final WrapperPlayServerScoreboardTeam wrappedPacket = new WrapperPlayServerScoreboardTeam(packet);
 
@@ -443,9 +440,9 @@ public class GlowAPI extends JavaPlugin {
 
 		final ProtocolManager protocolManager = ProtocolLibrary.getProtocolManager();
 		try {
-			protocolManager.sendServerPacket(receiver, packet);
+			protocolManager.sendServerPacket(player, packet);
 		} catch (InvocationTargetException e) {
-			throw new RuntimeException("Unable to send packet " + packet.toString() + " to player " + receiver.toString(), e);
+			throw new RuntimeException("Unable to send packet " + packet.toString() + " to player " + player.toString(), e);
 		}
 	}
 
