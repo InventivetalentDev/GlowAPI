@@ -391,10 +391,12 @@ public class GlowAPI extends JavaPlugin {
 			wrappedPacket.setTeamSuffix("");
 			wrappedPacket.setAllowFriendlyFire(true);
 			wrappedPacket.setCanSeeFriendlyInvisibles(false);
-		} else if (entity != null) {
-			//Add/remove players
+		} else {
+			if (entity == null) return;
+			//Add/remove entries
 			String entry;
-			if (entity instanceof OfflinePlayer) {//Players still use the name...
+			if (entity instanceof OfflinePlayer) {
+				//Players still use the name...
 				entry = entity.getName();
 			} else {
 				entry = entity.getUniqueId().toString();
