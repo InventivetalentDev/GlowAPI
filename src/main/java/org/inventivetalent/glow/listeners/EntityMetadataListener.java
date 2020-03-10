@@ -9,13 +9,14 @@ import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.inventivetalent.glow.GlowAPI;
 import org.inventivetalent.glow.packetwrapper.WrapperPlayServerEntityMetadata;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 
 public class EntityMetadataListener implements PacketListener {
 
     @Override
-    public void onPacketSending(PacketEvent packetEvent) {
+    public void onPacketSending(@NotNull PacketEvent packetEvent) {
         PacketContainer packet = packetEvent.getPacket();
         WrapperPlayServerEntityMetadata wrappedPacket = new WrapperPlayServerEntityMetadata(packet);
 
@@ -49,9 +50,10 @@ public class EntityMetadataListener implements PacketListener {
     }
 
     @Override
-    public void onPacketReceiving(PacketEvent packetEvent) { }
+    public void onPacketReceiving(@NotNull PacketEvent packetEvent) { }
 
     @Override
+    @NotNull
     public ListeningWhitelist getSendingWhitelist() {
         return ListeningWhitelist
             .newBuilder()
@@ -63,6 +65,7 @@ public class EntityMetadataListener implements PacketListener {
     }
 
     @Override
+    @NotNull
     public ListeningWhitelist getReceivingWhitelist() {
         return ListeningWhitelist
             .newBuilder()
@@ -70,6 +73,7 @@ public class EntityMetadataListener implements PacketListener {
     }
 
     @Override
+    @NotNull
     public Plugin getPlugin() {
         return GlowAPI.getPlugin();
     }
