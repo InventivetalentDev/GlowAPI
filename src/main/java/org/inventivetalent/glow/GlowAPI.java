@@ -17,11 +17,7 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.inventivetalent.glow.callables.EntityById;
-import org.inventivetalent.glow.callables.InitTeams;
-import org.inventivetalent.glow.callables.SendGlowPacket;
-import org.inventivetalent.glow.callables.SendTeamPacket;
-import org.inventivetalent.glow.callables.SetGlowing;
+import org.inventivetalent.glow.callables.*;
 import org.inventivetalent.glow.listeners.EntityMetadataListener;
 import org.inventivetalent.glow.listeners.PlayerJoinListener;
 import org.inventivetalent.glow.listeners.PlayerQuitListener;
@@ -267,15 +263,15 @@ public class GlowAPI extends JavaPlugin {
 			@Override
 			public Void call() throws Exception {
 				players
-						.parallelStream()
-						.map(player -> setGlowingAsync(entity, color, player))
-						.forEach(future -> {
-							try {
-								future.get();
-							} catch (InterruptedException | ExecutionException e) {
-								throw new RuntimeException(e);
-							}
-						});
+					.parallelStream()
+					.map(player -> setGlowingAsync(entity, color, player))
+					.forEach(future -> {
+						try {
+							future.get();
+						} catch (InterruptedException | ExecutionException e) {
+							throw new RuntimeException(e);
+						}
+					});
 				return null;
 			}
 
@@ -306,24 +302,7 @@ public class GlowAPI extends JavaPlugin {
 								               @Nullable GlowAPI.Color color,
 								               @NotNull Player player) {
 		ExecutorService service = GlowAPI.getPlugin().getService();
-		Callable<Void> call = new Callable<Void>() {
-
-			@Override
-			public Void call() throws Exception {
-				entities
-					.parallelStream()
-					.map(entity -> setGlowingAsync(entity, color, player))
-					.forEach(future -> {
-						try {
-							future.get();
-						} catch (InterruptedException | ExecutionException e) {
-							throw new RuntimeException(e);
-						}
-					});
-				return null;
-			}
-
-		};
+		Callable<Void> call = new SetGlowingMany(entities, color, player);
 		return service.submit(call);
 	}
 	/**
@@ -354,9 +333,9 @@ public class GlowAPI extends JavaPlugin {
 
 			@Override
 			public Void call() throws Exception {
-				entities
+				players
 					.parallelStream()
-					.map(entity -> setGlowingAsync(entity, color, players))
+					.map(player -> setGlowingAsync(entities, color, player))
 					.forEach(future -> {
 						try {
 							future.get();

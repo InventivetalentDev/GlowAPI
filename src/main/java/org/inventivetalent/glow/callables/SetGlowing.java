@@ -27,7 +27,7 @@ public class SetGlowing implements Callable<Void> {
                       @Nullable GlowAPI.Color color,
                       @NotNull NameTagVisibility nameTagVisibility,
                       @NotNull TeamPush teamPush,
-                      @Nullable Player player) {
+                      @NotNull Player player) {
         this.entity = entity;
         this.color = color;
         this.nameTagVisibility = nameTagVisibility;
