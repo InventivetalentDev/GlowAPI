@@ -149,8 +149,8 @@ public class GlowAPI extends JavaPlugin {
 
 		if (glowData.colorMap.isEmpty()) {
 			dataMap.remove(entityUniqueId);
-		} else {
-			if (entity != null) dataMap.put(entityUniqueId, glowData);
+		} else if (entity != null) {
+			dataMap.put(entityUniqueId, glowData);
 		}
 
 		if (color != null && oldColor == color) return;
