@@ -2,7 +2,7 @@
 [![Build Status](https://travis-ci.com/metalshark/GlowAPI.svg?branch=master)](https://travis-ci.com/metalshark/GlowAPI)
 [![Latest release](https://img.shields.io/github/release/metalshark/GlowAPI.svg)](https://github.com/metalshark/GlowAPI/releases/latest)
 [![GitHub contributors](https://img.shields.io/github/contributors/metalshark/GlowAPI.svg)](https://github.com/metalshark/GlowAPI/graphs/contributors)
-[![License](https://img.shields.io/github/license/metalshark/GlowAPI.svg)](https://github.com/DiscordSRV/DiscordSRV/blob/master/LICENSE)
+[![License](https://img.shields.io/github/license/metalshark/GlowAPI.svg)](https://github.com/metalshark/GlowAPI/blob/master/LICENSE)
 
 This API allows you to change the glow-color of entities and players.
 
