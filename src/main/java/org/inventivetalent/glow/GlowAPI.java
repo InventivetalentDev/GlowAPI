@@ -1,16 +1,10 @@
 package org.inventivetalent.glow;
 
 import com.comphenix.protocol.AsynchronousManager;
-import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.ProtocolManager;
 import com.comphenix.protocol.async.AsyncListenerHandler;
-import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.events.PacketListener;
-import com.comphenix.protocol.wrappers.WrappedDataWatcher;
-import com.comphenix.protocol.wrappers.WrappedDataWatcher.Serializer;
-import com.comphenix.protocol.wrappers.WrappedDataWatcher.WrappedDataWatcherObject;
-import com.comphenix.protocol.wrappers.WrappedWatchableObject;
 import lombok.Getter;
 import org.bstats.bukkit.MetricsLite;
 import org.bukkit.Bukkit;
@@ -24,22 +18,19 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.inventivetalent.glow.callables.EntityById;
+import org.inventivetalent.glow.callables.SendGlowPacket;
 import org.inventivetalent.glow.callables.SendTeamPacket;
 import org.inventivetalent.glow.callables.SetGlowing;
 import org.inventivetalent.glow.listeners.EntityMetadataListener;
 import org.inventivetalent.glow.listeners.PlayerJoinListener;
 import org.inventivetalent.glow.listeners.PlayerQuitListener;
-import org.inventivetalent.glow.packetwrappers.WrapperPlayServerEntityMetadata;
 import org.inventivetalent.glow.packetwrappers.WrapperPlayServerScoreboardTeam.NameTagVisibility;
 import org.inventivetalent.glow.packetwrappers.WrapperPlayServerScoreboardTeam.TeamPush;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.lang.reflect.InvocationTargetException;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.*;
@@ -50,7 +41,6 @@ public class GlowAPI extends JavaPlugin {
 
 	@Getter
 	private static final Map<UUID, GlowData> dataMap = new ConcurrentHashMap<>();
-	private static final Serializer dataWatcherByteSerializer = WrappedDataWatcher.Registry.get(Byte.class);
 
 	private Listener playerJoinListener;
 	private Listener playerQuitListener;
@@ -241,6 +231,7 @@ public class GlowAPI extends JavaPlugin {
 							throw new RuntimeException(e);
 						}
 					});
+				return null;
 			}
 
 		};
@@ -285,6 +276,7 @@ public class GlowAPI extends JavaPlugin {
 								throw new RuntimeException(e);
 							}
 						});
+				return null;
 			}
 
 		};
@@ -328,6 +320,7 @@ public class GlowAPI extends JavaPlugin {
 							throw new RuntimeException(e);
 						}
 					});
+				return null;
 			}
 
 		};
@@ -371,6 +364,7 @@ public class GlowAPI extends JavaPlugin {
 							throw new RuntimeException(e);
 						}
 					});
+				return null;
 			}
 
 		};
@@ -441,30 +435,23 @@ public class GlowAPI extends JavaPlugin {
 		return data.colorMap.get(player.getUniqueId());
 	}
 
+	@NotNull
+	public static Future<Void> sendGlowPacketAsync(@NotNull Entity entity,
+												   boolean glowing,
+												   @NotNull Player player) {
+		ExecutorService service = GlowAPI.getPlugin().getService();
+		Callable<Void> call = new SendGlowPacket(entity, glowing, player);
+		return service.submit(call);
+	}
+
 	public static void sendGlowPacket(@NotNull Entity entity,
 									  boolean glowing,
 									  @NotNull Player player) {
-		final PacketContainer packet = new PacketContainer(PacketType.Play.Server.ENTITY_METADATA);
-		final WrapperPlayServerEntityMetadata wrappedPacket = new WrapperPlayServerEntityMetadata(packet);
-		final WrappedDataWatcherObject dataWatcherObject = new WrappedDataWatcherObject(0, dataWatcherByteSerializer);
-
-		final int invertedEntityId = -entity.getEntityId();
-
-		final WrappedDataWatcher dataWatcher = WrappedDataWatcher.getEntityWatcher(entity);
-		final List<WrappedWatchableObject> dataWatcherObjects = dataWatcher.getWatchableObjects();
-		byte entityByte = (dataWatcherObjects.isEmpty()) ? 0x00 : (byte) dataWatcherObjects.get(0).getValue();
-		entityByte = (byte) (glowing ? (entityByte | ENTITY_GLOWING_EFFECT) : (entityByte & ~ENTITY_GLOWING_EFFECT));
-
-		final WrappedWatchableObject wrappedMetadata = new WrappedWatchableObject(dataWatcherObject, entityByte);
-		final List<WrappedWatchableObject> metadata = Collections.singletonList(wrappedMetadata);
-
-		wrappedPacket.setEntityID(invertedEntityId);
-		wrappedPacket.setMetadata(metadata);
-
+		Future<Void> future = sendGlowPacketAsync(entity, glowing, player);
 		try {
-			GlowAPI.getPlugin().protocolManager.sendServerPacket(player, packet);
-		} catch (InvocationTargetException e) {
-			throw new RuntimeException("Unable to send packet " + packet.toString() + " to player " + player.toString(), e);
+			future.get();
+		} catch (InterruptedException | ExecutionException e) {
+			throw new RuntimeException(e);
 		}
 	}
 

@@ -43,6 +43,7 @@ public class SendTeamPacket implements Callable<Void> {
         this.player = player;
     }
 
+    @Nullable
     @Override
     public Void call() throws Exception {
         final PacketContainer packet = new PacketContainer(PacketType.Play.Server.SCOREBOARD_TEAM);

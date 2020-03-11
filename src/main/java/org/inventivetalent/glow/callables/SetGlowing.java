@@ -13,6 +13,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
 
 public class SetGlowing implements Callable<Void> {
 
@@ -34,6 +35,7 @@ public class SetGlowing implements Callable<Void> {
         this.player = player;
     }
 
+    @Nullable
     @Override
     public Void call() throws Exception {
         if (player == null) return null;
@@ -64,7 +66,10 @@ public class SetGlowing implements Callable<Void> {
         }
         if (!player.isOnline()) return null;
 
-        GlowAPI.sendGlowPacket(entity, glowing, player);
+        final boolean finalGlowing = glowing;
+        CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
+            GlowAPI.sendGlowPacket(entity, finalGlowing, player);
+        });
 
         final boolean createNewTeam = false;
         if (oldColor != null) {
@@ -72,14 +77,18 @@ public class SetGlowing implements Callable<Void> {
             if (oldColor != GlowAPI.Color.NONE) {
                 final boolean addEntity = false;
                 //use the old color to remove the player from its team
-                GlowAPI.sendTeamPacket(entity, oldColor, createNewTeam, addEntity, nameTagVisibility, teamPush, player);
+                future.thenRunAsync(() -> {
+                    GlowAPI.sendTeamPacket(entity, oldColor, createNewTeam, addEntity, nameTagVisibility, teamPush, player);
+                });
             }
         }
         if (glowing) {
             final boolean addEntity = color != GlowAPI.Color.NONE;
-            GlowAPI.sendTeamPacket(entity, color, createNewTeam, addEntity, nameTagVisibility, teamPush, player);
+            future.thenRunAsync(() -> {
+                GlowAPI.sendTeamPacket(entity, color, createNewTeam, addEntity, nameTagVisibility, teamPush, player);
+            });
         }
-        return null;
+        return future.get();
     }
 
 }
