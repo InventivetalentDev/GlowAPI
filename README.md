@@ -5,9 +5,11 @@ This API allows you to change the glow-color of entities and players.
 - [Website](https://inventivetalent.org/)
 - [Donate](https://donation.inventivetalent.org/plugin/GlowAPI)
 
-**Depends on [ProtocolLib](https://www.spigotmc.org/resources/protocollib.1997/)**
+**Depends on [ProtocolLib](https://www.spigotmc.org/resources/protocollib.1997/).**
 
 Versions 1.4.11 and below depended on [PacketListenerAPI](https://www.spigotmc.org/resources/api-packetlistenerapi.2930/) instead.
+
+API versions 1.4.11 and below are also compatible with [APIManager](https://www.spigotmc.org/resources/api-apimanager.19738/).
 
 Version 1.4.7 is intended for 1.13+ only. For older MC versions, please use 1.4.6.
 
@@ -28,19 +30,17 @@ public void onJoin(final PlayerJoinEvent event) {
 ## Maven
 ```xml
 <repositories>
-  <repository>
-    <id>inventive-repo</id>
-    <url>https://repo.inventivetalent.org/content/groups/public/</url>
-  </repository>
+    <repository>
+        <id>jitpack.io</id>
+        <url>https://jitpack.io</url>
+    </repository>
 </repositories>
 
 <dependencies>
-  <dependency>
-    <groupId>org.inventivetalent</groupId>
-    <artifactId>glowapi</artifactId>
-    <version>1.4.11-SNAPSHOT</version>
-  </dependency>
+    <dependency>
+        <groupId>com.github.metalshark</groupId>
+        <artifactId>GlowAPI</artifactId>
+        <version>master-bfab7675d2-1</version>
+    </dependency>
 </dependencies>
 ```
-## API Manager
-API versions 1.4.11 and below are compatible with [APIManager](https://www.spigotmc.org/resources/api-apimanager.19738/).

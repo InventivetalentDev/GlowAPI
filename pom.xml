@@ -83,18 +83,6 @@
         </plugins>
     </build>
 
-    <distributionManagement>
-        <repository>
-            <id>sonatype-nexus-releases</id>
-            <url>https://repo.inventivetalent.org/content/repositories/releases/</url>
-        </repository>
-
-        <snapshotRepository>
-            <id>sonatype-nexus-snapshots</id>
-            <url>https://repo.inventivetalent.org/content/repositories/snapshots/</url>
-        </snapshotRepository>
-    </distributionManagement>
-
     <dependencies>
         <!-- Bstats -->
         <dependency>
@@ -111,19 +99,19 @@
             <scope>provided</scope>
         </dependency>
 
-        <!-- ProtocolLib -->
-        <dependency>
-            <groupId>com.comphenix.protocol</groupId>
-            <artifactId>ProtocolLib</artifactId>
-            <version>4.5.0</version>
-        </dependency>
-
         <!-- Nullable/NotNull -->
         <dependency>
             <groupId>org.jetbrains</groupId>
             <artifactId>annotations</artifactId>
             <version>18.0.0</version>
             <scope>compile</scope>
+        </dependency>
+
+        <!-- ProtocolLib -->
+        <dependency>
+            <groupId>com.comphenix.protocol</groupId>
+            <artifactId>ProtocolLib</artifactId>
+            <version>4.5.0</version>
         </dependency>
     </dependencies>
 
