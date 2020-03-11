@@ -19,7 +19,7 @@ public class EntityById implements Callable<Entity> {
 
     @Nullable
     @Override
-    public Entity call() {
+    public Entity call() throws Exception {
         return world
             .getEntities()
             .parallelStream()

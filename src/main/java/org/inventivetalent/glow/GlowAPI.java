@@ -25,6 +25,7 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.inventivetalent.glow.callables.EntityById;
+import org.inventivetalent.glow.callables.SendTeamPacket;
 import org.inventivetalent.glow.listeners.EntityMetadataListener;
 import org.inventivetalent.glow.listeners.PlayerJoinListener;
 import org.inventivetalent.glow.listeners.PlayerQuitListener;
@@ -55,6 +56,7 @@ public class GlowAPI extends JavaPlugin {
 	private Listener playerJoinListener;
 	private Listener playerQuitListener;
 
+	@Getter
 	private ProtocolManager protocolManager;
 	private AsynchronousManager asynchronousManager;
 	private AsyncListenerHandler entityMetadataListenerHandler;
@@ -86,6 +88,7 @@ public class GlowAPI extends JavaPlugin {
 		WHITE(ChatColor.WHITE),
 		NONE(ChatColor.RESET);
 
+		@Getter
 		ChatColor chatColor;
 
 		Color(@NotNull ChatColor chatColor) {
@@ -93,7 +96,7 @@ public class GlowAPI extends JavaPlugin {
 		}
 
 		@NotNull
-		String getTeamName() {
+		public String getTeamName() {
 			String name = String.format("GAPI#%s", name());
 			if (name.length() > 16) {
 				name = name.substring(0, 16);
@@ -387,6 +390,19 @@ public class GlowAPI extends JavaPlugin {
 		initTeam(player, NameTagVisibility.ALWAYS, TeamPush.ALWAYS);
 	}
 
+	@NotNull
+	public static Future<Void> sendTeamPacketAsync(@Nullable Entity entity,
+												   @NotNull GlowAPI.Color color,
+												   boolean createNewTeam,
+												   boolean addEntity,
+												   @NotNull NameTagVisibility nameTagVisibility,
+												   @NotNull TeamPush teamPush,
+												   @NotNull Player player) {
+		ExecutorService service = GlowAPI.getPlugin().getService();
+		Callable<Void> call = new SendTeamPacket(entity, color, createNewTeam, addEntity, nameTagVisibility, teamPush, player);
+		return service.submit(call);
+	}
+
 	/**
 	 *
 	 * @param entity 		{@link Entity} Entity to set glowing status of
@@ -404,47 +420,15 @@ public class GlowAPI extends JavaPlugin {
 										 @NotNull NameTagVisibility tagVisibility,
 										 @NotNull TeamPush push,
 										 @NotNull Player player) {
-		final PacketContainer packet = new PacketContainer(PacketType.Play.Server.SCOREBOARD_TEAM);
-		final WrapperPlayServerScoreboardTeam wrappedPacket = new WrapperPlayServerScoreboardTeam(packet);
-
-		final Modes packetMode = (createNewTeam ? Modes.TEAM_CREATED : (addEntity ? Modes.PLAYERS_ADDED : Modes.PLAYERS_REMOVED));
-		final String teamName = color.getTeamName();
-
-		wrappedPacket.setPacketMode(packetMode);
-		wrappedPacket.setName(teamName);
-		wrappedPacket.setNameTagVisibility(tagVisibility);
-		wrappedPacket.setTeamPush(push);
-
-		if (createNewTeam) {
-			wrappedPacket.setTeamColor(color.chatColor);
-			wrappedPacket.setTeamPrefix(color.chatColor.toString());
-			wrappedPacket.setTeamDisplayName(teamName);
-			wrappedPacket.setTeamSuffix("");
-			wrappedPacket.setAllowFriendlyFire(true);
-			wrappedPacket.setCanSeeFriendlyInvisibles(false);
-		} else {
-			if (entity == null) return;
-			//Add/remove entries
-			String entry;
-			if (entity instanceof OfflinePlayer) {
-				//Players still use the name...
-				entry = entity.getName();
-			} else {
-				entry = entity.getUniqueId().toString();
-			}
-			Collection<String> entries = wrappedPacket.getEntries();
-			entries.add(entry);
-		}
-
+		Future<Void> future = sendTeamPacketAsync(entity, color, createNewTeam, addEntity, tagVisibility, push, player);
 		try {
-			GlowAPI.getPlugin().protocolManager.sendServerPacket(player, packet);
-		} catch (InvocationTargetException e) {
-			throw new RuntimeException("Unable to send packet " + packet.toString() + " to player " + player.toString(), e);
+			future.get();
+		} catch (InterruptedException | ExecutionException e) {
+			throw new RuntimeException(e);
 		}
 	}
 
-	@Nullable
-	@SuppressWarnings("unused")
+	@NotNull
 	public static Future<Entity> getEntityByIdAsync(@NotNull World world,
 													int entityId) {
 		ExecutorService service = GlowAPI.getPlugin().getService();
@@ -456,11 +440,11 @@ public class GlowAPI extends JavaPlugin {
 	@SuppressWarnings("unused")
 	public static Entity getEntityById(@NotNull World world,
 									   int entityId) {
-		Future<Entity> future = getEntityByIdAsync(world, entityId)
+		Future<Entity> future = getEntityByIdAsync(world, entityId);
 		try {
 			return future.get();
 		} catch (InterruptedException | ExecutionException e) {
-			e.printStackTrace();
+			throw new RuntimeException(e);
 		}
 	}
 
