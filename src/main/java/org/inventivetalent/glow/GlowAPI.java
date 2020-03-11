@@ -8,6 +8,8 @@ import com.comphenix.protocol.async.AsyncListenerHandler;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.events.PacketListener;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher;
+import com.comphenix.protocol.wrappers.WrappedDataWatcher.Serializer;
+import com.comphenix.protocol.wrappers.WrappedDataWatcher.WrappedDataWatcherObject;
 import com.comphenix.protocol.wrappers.WrappedWatchableObject;
 import org.bstats.bukkit.MetricsLite;
 import org.bukkit.Bukkit;
@@ -16,6 +18,9 @@ import org.bukkit.OfflinePlayer;
 import org.bukkit.World;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
+import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.inventivetalent.glow.listeners.EntityMetadataListener;
@@ -42,7 +47,11 @@ import java.util.stream.Stream;
 public class GlowAPI extends JavaPlugin {
 	public static final byte ENTITY_GLOWING_EFFECT = (byte) 0x40;
 
-	private static Map<UUID, GlowData> dataMap = new ConcurrentHashMap<>();
+	private static final Map<UUID, GlowData> dataMap = new ConcurrentHashMap<>();
+	private static final Serializer dataWatcherByteSerializer = WrappedDataWatcher.Registry.get(Byte.class);
+
+	private Listener playerJoinListener;
+	private Listener playerQuitListener;
 
 	private ProtocolManager protocolManager;
 	private AsynchronousManager asynchronousManager;
@@ -95,9 +104,11 @@ public class GlowAPI extends JavaPlugin {
 	public void onEnable() {
 		new MetricsLite(this, 2190);
 
+		playerJoinListener = new PlayerJoinListener();
+		playerQuitListener = new PlayerQuitListener();
 		final PluginManager pluginManager = Bukkit.getPluginManager();
-		pluginManager.registerEvents(new PlayerJoinListener(), this);
-		pluginManager.registerEvents(new PlayerQuitListener(), this);
+		pluginManager.registerEvents(playerJoinListener, this);
+		pluginManager.registerEvents(playerQuitListener, this);
 
 		protocolManager = ProtocolLibrary.getProtocolManager();
 		asynchronousManager = protocolManager.getAsynchronousManager();
@@ -109,6 +120,9 @@ public class GlowAPI extends JavaPlugin {
 
 	@Override
 	public void onDisable() {
+		PlayerJoinEvent.getHandlerList().unregister(playerJoinListener);
+		PlayerQuitEvent.getHandlerList().unregister(playerQuitListener);
+
 		asynchronousManager.unregisterAsyncHandler(entityMetadataListenerHandler);
 	}
 
@@ -141,17 +155,11 @@ public class GlowAPI extends JavaPlugin {
 		final UUID playerUniqueId = player.getUniqueId();
 		final GlowAPI.Color oldColor = wasGlowing ? glowData.colorMap.get(playerUniqueId) : null;
 
-		if (glowing) {
-			glowData.colorMap.put(playerUniqueId, color);
-		} else {
-			glowData.colorMap.remove(playerUniqueId);
-		}
+		if (glowing) glowData.colorMap.put(playerUniqueId, color);
+		else glowData.colorMap.remove(playerUniqueId);
 
-		if (glowData.colorMap.isEmpty()) {
-			dataMap.remove(entityUniqueId);
-		} else if (entity != null) {
-			dataMap.put(entityUniqueId, glowData);
-		}
+		if (glowData.colorMap.isEmpty()) dataMap.remove(entityUniqueId);
+		else if (entity != null) dataMap.put(entityUniqueId, glowData);
 
 		if (color != null && oldColor == color) return;
 		if (entity == null) return;
@@ -322,7 +330,7 @@ public class GlowAPI extends JavaPlugin {
 										 @NotNull Player player) {
 		final PacketContainer packet = new PacketContainer(PacketType.Play.Server.ENTITY_METADATA);
 		final WrapperPlayServerEntityMetadata wrappedPacket = new WrapperPlayServerEntityMetadata(packet);
-		final WrappedDataWatcher.WrappedDataWatcherObject dataWatcherObject = new WrappedDataWatcher.WrappedDataWatcherObject(0, WrappedDataWatcher.Registry.get(Byte.class));
+		final WrappedDataWatcherObject dataWatcherObject = new WrappedDataWatcherObject(0, dataWatcherByteSerializer);
 
 		final int invertedEntityId = -entity.getEntityId();
 
