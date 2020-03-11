@@ -137,6 +137,7 @@ public class GlowAPI extends JavaPlugin {
 		service.shutdown();
 	}
 
+	@NotNull
 	public static Future<Void> setGlowingAsync(@Nullable Entity entity,
    										       @Nullable GlowAPI.Color color,
 											   @NotNull NameTagVisibility nameTagVisibility,
@@ -170,6 +171,12 @@ public class GlowAPI extends JavaPlugin {
 		}
 	}
 
+	@NotNull
+	public static Future<Void> setGlowingAsync(@Nullable Entity entity,
+							         	       @Nullable GlowAPI.Color color,
+								               @NotNull Player player) {
+		return setGlowingAsync(entity, color, NameTagVisibility.ALWAYS, TeamPush.ALWAYS, player);
+	}
 	/**
 	 * Set the glowing-color of an entity
 	 *
@@ -181,9 +188,20 @@ public class GlowAPI extends JavaPlugin {
 	public static void setGlowing(@Nullable Entity entity,
 								  @Nullable GlowAPI.Color color,
 								  @NotNull Player player) {
-		setGlowing(entity, color, NameTagVisibility.ALWAYS, TeamPush.ALWAYS, player);
+		Future<Void> future = setGlowingAsync(entity, color, player);
+		try {
+			future.get();
+		} catch (InterruptedException | ExecutionException e) {
+			throw new RuntimeException(e);
+		}
 	}
 
+	@NotNull
+	public static Future<Void> setGlowingAsync(@Nullable Entity entity,
+								               boolean glowing,
+								               @NotNull Player player) {
+		return setGlowingAsync(entity, glowing ? GlowAPI.Color.NONE : null, player);
+	}
 	/**
 	 * Set the glowing-color of an entity
 	 *
@@ -196,9 +214,38 @@ public class GlowAPI extends JavaPlugin {
 	public static void setGlowing(@Nullable Entity entity,
 								  boolean glowing,
 								  @NotNull Player player) {
-		setGlowing(entity, glowing ? GlowAPI.Color.NONE : null, player);
+		Future<Void> future = setGlowingAsync(entity, glowing, player);
+		try {
+			future.get();
+		} catch (InterruptedException | ExecutionException e) {
+			throw new RuntimeException(e);
+		}
 	}
 
+	@NotNull
+	public static Future<Void> setGlowingAsync(@Nullable Entity entity,
+							         		   boolean glowing,
+								               @NotNull Collection<? extends Player> players) {
+		ExecutorService service = GlowAPI.getPlugin().getService();
+		Callable<Void> call = new Callable<Void>() {
+
+			@Override
+			public Void call() throws Exception {
+				players
+					.parallelStream()
+					.map(player -> setGlowingAsync(entity, glowing, player))
+					.forEach(future -> {
+						try {
+							future.get();
+						} catch (InterruptedException | ExecutionException e) {
+							throw new RuntimeException(e);
+						}
+					});
+			}
+
+		};
+		return service.submit(call);
+	}
 	/**
 	 * Set the glowing-color of an entity
 	 *
@@ -211,11 +258,38 @@ public class GlowAPI extends JavaPlugin {
 	public static void setGlowing(@Nullable Entity entity,
 								  boolean glowing,
 								  @NotNull Collection<? extends Player> players) {
-		players
-			.parallelStream()
-			.forEach(player -> setGlowing(entity, glowing, player));
+		Future<Void> future = setGlowingAsync(entity, glowing, players);
+		try {
+			future.get();
+		} catch (InterruptedException | ExecutionException e) {
+			throw new RuntimeException(e);
+		}
 	}
 
+	@NotNull
+	public static Future<Void> setGlowingAsync(@Nullable Entity entity,
+											   @Nullable GlowAPI.Color color,
+											   @NotNull Collection<? extends Player> players) {
+		ExecutorService service = GlowAPI.getPlugin().getService();
+		Callable<Void> call = new Callable<Void>() {
+
+			@Override
+			public Void call() throws Exception {
+				players
+						.parallelStream()
+						.map(player -> setGlowingAsync(entity, color, player))
+						.forEach(future -> {
+							try {
+								future.get();
+							} catch (InterruptedException | ExecutionException e) {
+								throw new RuntimeException(e);
+							}
+						});
+			}
+
+		};
+		return service.submit(call);
+	}
 	/**
 	 * Set the glowing-color of an entity
 	 *
@@ -227,11 +301,38 @@ public class GlowAPI extends JavaPlugin {
 	public static void setGlowing(@Nullable Entity entity,
 								  @Nullable GlowAPI.Color color,
 								  @NotNull Collection<? extends Player> players) {
-		players
-			.parallelStream()
-			.forEach(player -> setGlowing(entity, color, player));
+		Future<Void> future = setGlowingAsync(entity, color, players);
+		try {
+			future.get();
+		} catch (InterruptedException | ExecutionException e) {
+			throw new RuntimeException(e);
+		}
 	}
 
+	@NotNull
+	public static Future<Void> setGlowingAsync(@NotNull Collection<? extends Entity> entities,
+								               @Nullable GlowAPI.Color color,
+								               @NotNull Player player) {
+		ExecutorService service = GlowAPI.getPlugin().getService();
+		Callable<Void> call = new Callable<Void>() {
+
+			@Override
+			public Void call() throws Exception {
+				entities
+					.parallelStream()
+					.map(entity -> setGlowingAsync(entity, color, player))
+					.forEach(future -> {
+						try {
+							future.get();
+						} catch (InterruptedException | ExecutionException e) {
+							throw new RuntimeException(e);
+						}
+					});
+			}
+
+		};
+		return service.submit(call);
+	}
 	/**
 	 * Set the glowing-color of an entity
 	 *
@@ -243,11 +344,38 @@ public class GlowAPI extends JavaPlugin {
 	public static void setGlowing(@NotNull Collection<? extends Entity> entities,
 								  @Nullable GlowAPI.Color color,
 								  @NotNull Player player) {
-		entities
-			.parallelStream()
-			.forEach(entity -> setGlowing(entity, color, player));
+		Future<Void> future = setGlowingAsync(entities, color, player);
+		try {
+			future.get();
+		} catch (InterruptedException | ExecutionException e) {
+			throw new RuntimeException(e);
+		}
 	}
 
+	@NotNull
+	public static Future<Void> setGlowingAsync(@NotNull Collection<? extends Entity> entities,
+							              	   @Nullable GlowAPI.Color color,
+								               @NotNull Collection<? extends Player> players) {
+		ExecutorService service = GlowAPI.getPlugin().getService();
+		Callable<Void> call = new Callable<Void>() {
+
+			@Override
+			public Void call() throws Exception {
+				entities
+					.parallelStream()
+					.map(entity -> setGlowingAsync(entity, color, players))
+					.forEach(future -> {
+						try {
+							future.get();
+						} catch (InterruptedException | ExecutionException e) {
+							throw new RuntimeException(e);
+						}
+					});
+			}
+
+		};
+		return service.submit(call);
+	}
 	/**
 	 * Set the glowing-color of an entity
 	 *
@@ -259,9 +387,12 @@ public class GlowAPI extends JavaPlugin {
 	public static void setGlowing(@NotNull Collection<? extends Entity> entities,
 								  @Nullable GlowAPI.Color color,
 								  @NotNull Collection<? extends Player> players) {
-		entities
-			.parallelStream()
-			.forEach(entity -> setGlowing(entity, color, players));
+		Future<Void> future = setGlowingAsync(entities, color, players);
+		try {
+			future.get();
+		} catch (InterruptedException | ExecutionException e) {
+			throw new RuntimeException(e);
+		}
 	}
 
 	/**
