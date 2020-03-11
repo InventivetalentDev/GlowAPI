@@ -8,7 +8,7 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.inventivetalent.glow.GlowAPI;
-import org.inventivetalent.glow.packetwrapper.WrapperPlayServerEntityMetadata;
+import org.inventivetalent.glow.packetwrappers.WrapperPlayServerEntityMetadata;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;

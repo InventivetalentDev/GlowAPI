@@ -29,11 +29,9 @@ import org.inventivetalent.glow.callables.SendTeamPacket;
 import org.inventivetalent.glow.listeners.EntityMetadataListener;
 import org.inventivetalent.glow.listeners.PlayerJoinListener;
 import org.inventivetalent.glow.listeners.PlayerQuitListener;
-import org.inventivetalent.glow.packetwrapper.WrapperPlayServerEntityMetadata;
-import org.inventivetalent.glow.packetwrapper.WrapperPlayServerScoreboardTeam;
-import org.inventivetalent.glow.packetwrapper.WrapperPlayServerScoreboardTeam.Modes;
-import org.inventivetalent.glow.packetwrapper.WrapperPlayServerScoreboardTeam.NameTagVisibility;
-import org.inventivetalent.glow.packetwrapper.WrapperPlayServerScoreboardTeam.TeamPush;
+import org.inventivetalent.glow.packetwrappers.WrapperPlayServerEntityMetadata;
+import org.inventivetalent.glow.packetwrappers.WrapperPlayServerScoreboardTeam.NameTagVisibility;
+import org.inventivetalent.glow.packetwrappers.WrapperPlayServerScoreboardTeam.TeamPush;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 

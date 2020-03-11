@@ -6,10 +6,10 @@ import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.inventivetalent.glow.GlowAPI;
-import org.inventivetalent.glow.packetwrapper.WrapperPlayServerScoreboardTeam;
-import org.inventivetalent.glow.packetwrapper.WrapperPlayServerScoreboardTeam.Modes;
-import org.inventivetalent.glow.packetwrapper.WrapperPlayServerScoreboardTeam.NameTagVisibility;
-import org.inventivetalent.glow.packetwrapper.WrapperPlayServerScoreboardTeam.TeamPush;
+import org.inventivetalent.glow.packetwrappers.WrapperPlayServerScoreboardTeam;
+import org.inventivetalent.glow.packetwrappers.WrapperPlayServerScoreboardTeam.Modes;
+import org.inventivetalent.glow.packetwrappers.WrapperPlayServerScoreboardTeam.NameTagVisibility;
+import org.inventivetalent.glow.packetwrappers.WrapperPlayServerScoreboardTeam.TeamPush;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
