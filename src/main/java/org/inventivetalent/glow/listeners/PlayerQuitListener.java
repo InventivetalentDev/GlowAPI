@@ -14,11 +14,11 @@ public class PlayerQuitListener implements Listener {
     @EventHandler(ignoreCancelled = true, priority = EventPriority.MONITOR)
     @SuppressWarnings("unused")
     public void onPlayerQuit(@NotNull PlayerQuitEvent event) {
-        for (Player receiver : Bukkit.getOnlinePlayers()) {
-            if (GlowAPI.isGlowing(event.getPlayer(), receiver)) {
-                GlowAPI.setGlowing(event.getPlayer(), null, receiver);
-            }
-        }
+        Player quittingPlayer = event.getPlayer();
+        Bukkit.getOnlinePlayers()
+            .parallelStream()
+            .filter(player -> GlowAPI.isGlowing(quittingPlayer, player))
+            .forEach(player -> GlowAPI.setGlowing(quittingPlayer, null, player));
     }
 
 }
