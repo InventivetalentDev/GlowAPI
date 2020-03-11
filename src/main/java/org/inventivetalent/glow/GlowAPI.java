@@ -30,12 +30,14 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.lang.reflect.InvocationTargetException;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Stream;
 
 public class GlowAPI extends JavaPlugin {
 	public static final byte ENTITY_GLOWING_EFFECT = (byte) 0x40;
@@ -49,6 +51,7 @@ public class GlowAPI extends JavaPlugin {
 	/**
 	 * Team Colors
 	 */
+	@SuppressWarnings("unused")
 	public enum Color {
 		BLACK(ChatColor.BLACK),
 		DARK_BLUE(ChatColor.DARK_BLUE),
@@ -75,7 +78,8 @@ public class GlowAPI extends JavaPlugin {
 			this.chatColor = chatColor;
 		}
 
-		@NotNull String getTeamName() {
+		@NotNull
+		String getTeamName() {
 			String name = String.format("GAPI#%s", name());
 			if (name.length() > 16) {
 				name = name.substring(0, 16);
@@ -115,7 +119,7 @@ public class GlowAPI extends JavaPlugin {
 	 * @param color         {@link GlowAPI.Color} of the glow, or <code>null</code> to stop glowing
 	 * @param tagVisibility visibility of the name-tag (always, hideForOtherTeams, hideForOwnTeam, never)
 	 * @param push          push behaviour (always, pushOtherTeams, pushOwnTeam, never)
-	 * @param player      {@link Player} that will see the update
+	 * @param player        {@link Player} that will see the update
 	 */
 	@SuppressWarnings("unused")
 	public static void setGlowing(@Nullable Entity entity,
@@ -176,8 +180,8 @@ public class GlowAPI extends JavaPlugin {
 	/**
 	 * Set the glowing-color of an entity
 	 *
-	 * @param entity   {@link Entity} to update
-	 * @param color    {@link GlowAPI.Color} of the glow, or <code>null</code> to stop glowing
+	 * @param entity {@link Entity} to update
+	 * @param color  {@link GlowAPI.Color} of the glow, or <code>null</code> to stop glowing
 	 * @param player {@link Player} that will see the update
 	 */
 	@SuppressWarnings("unused")
@@ -190,9 +194,9 @@ public class GlowAPI extends JavaPlugin {
 	/**
 	 * Set the glowing-color of an entity
 	 *
-	 * @param entity   {@link Entity} to update
-	 * @param glowing  whether the entity is glowing or not
-	 * @param player {@link Player} that will see the update
+	 * @param entity  {@link Entity} to update
+	 * @param glowing whether the entity is glowing or not
+	 * @param player  {@link Player} that will see the update
 	 * @see #setGlowing(Entity, GlowAPI.Color, Player)
 	 */
 	@SuppressWarnings("unused")
@@ -205,8 +209,8 @@ public class GlowAPI extends JavaPlugin {
 	/**
 	 * Set the glowing-color of an entity
 	 *
-	 * @param entity    {@link Entity} to update
-	 * @param glowing   whether the entity is glowing or not
+	 * @param entity  {@link Entity} to update
+	 * @param glowing whether the entity is glowing or not
 	 * @param players Collection of {@link Player}s that will see the update
 	 * @see #setGlowing(Entity, GlowAPI.Color, Player)
 	 */
@@ -214,25 +218,25 @@ public class GlowAPI extends JavaPlugin {
 	public static void setGlowing(@Nullable Entity entity,
 								  boolean glowing,
 								  @NotNull Collection<? extends Player> players) {
-		for (Player player : players) {
-			setGlowing(entity, glowing, player);
-		}
+		players
+			.parallelStream()
+			.forEach(player -> setGlowing(entity, glowing, player));
 	}
 
 	/**
 	 * Set the glowing-color of an entity
 	 *
-	 * @param entity    {@link Entity} to update
-	 * @param color     {@link GlowAPI.Color} of the glow, or <code>null</code> to stop glowing
+	 * @param entity  {@link Entity} to update
+	 * @param color   {@link GlowAPI.Color} of the glow, or <code>null</code> to stop glowing
 	 * @param players Collection of {@link Player}s that will see the update
 	 */
 	@SuppressWarnings("unused")
 	public static void setGlowing(@Nullable Entity entity,
 								  @Nullable GlowAPI.Color color,
 								  @NotNull Collection<? extends Player> players) {
-		for (Player player : players) {
-			setGlowing(entity, color, player);
-		}
+		players
+			.parallelStream()
+			.forEach(player -> setGlowing(entity, color, player));
 	}
 
 	/**
@@ -240,37 +244,37 @@ public class GlowAPI extends JavaPlugin {
 	 *
 	 * @param entities Collection of {@link Entity} to update
 	 * @param color    {@link GlowAPI.Color} of the glow, or <code>null</code> to stop glowing
-	 * @param player {@link Player} that will see the update
+	 * @param player   {@link Player} that will see the update
 	 */
 	@SuppressWarnings("unused")
 	public static void setGlowing(@NotNull Collection<? extends Entity> entities,
 								  @Nullable GlowAPI.Color color,
 								  @NotNull Player player) {
-		for (Entity entity : entities) {
-			setGlowing(entity, color, player);
-		}
+		entities
+			.parallelStream()
+			.forEach(entity -> setGlowing(entity, color, player));
 	}
 
 	/**
 	 * Set the glowing-color of an entity
 	 *
-	 * @param entities  Collection of {@link Entity} to update
-	 * @param color     {@link GlowAPI.Color} of the glow, or <code>null</code> to stop glowing
-	 * @param players Collection of {@link Player}s that will see the update
+	 * @param entities Collection of {@link Entity} to update
+	 * @param color    {@link GlowAPI.Color} of the glow, or <code>null</code> to stop glowing
+	 * @param players  Collection of {@link Player}s that will see the update
 	 */
 	@SuppressWarnings("unused")
 	public static void setGlowing(@NotNull Collection<? extends Entity> entities,
 								  @Nullable GlowAPI.Color color,
 								  @NotNull Collection<? extends Player> players) {
-		for (Entity entity : entities) {
-			setGlowing(entity, color, players);
-		}
+		entities
+			.parallelStream()
+			.forEach(entity -> setGlowing(entity, color, players));
 	}
 
 	/**
 	 * Check if an entity is glowing
 	 *
-	 * @param entity   {@link Entity} to check
+	 * @param entity {@link Entity} to check
 	 * @param player {@link Player} player to check (as used in the setGlowing methods)
 	 * @return <code>true</code> if the entity appears glowing to the player
 	 */
@@ -283,35 +287,24 @@ public class GlowAPI extends JavaPlugin {
 	/**
 	 * Checks if an entity is glowing
 	 *
-	 * @param entity    {@link Entity} to check
-	 * @param players Collection of {@link Player} players to check
-	 * @param checkAll  if <code>true</code>, this only returns <code>true</code> if the entity is glowing for all players; if <code>false</code> this returns <code>true</code> if the entity is glowing for any of the players
+	 * @param entity   {@link Entity} to check
+	 * @param players  Collection of {@link Player} players to check
+	 * @param checkAll if <code>true</code>, this only returns <code>true</code> if the entity is glowing for all players; if <code>false</code> this returns <code>true</code> if the entity is glowing for any of the players
 	 * @return <code>true</code> if the entity appears glowing to the players
 	 */
 	@SuppressWarnings("unused")
 	public static boolean isGlowing(@NotNull Entity entity,
 									@NotNull Collection<? extends Player> players,
 									boolean checkAll) {
-		if (checkAll) {
-			boolean glowing = true;
-			for (Player player : players) {
-				if (!isGlowing(entity, player)) {
-					glowing = false;
-				}
-			}
-			return glowing;
-		} else {
-			for (Player player : players) {
-				if (isGlowing(entity, player)) { return true; }
-			}
-		}
-		return false;
+		Stream<? extends Player> playersStream =  players.parallelStream();
+		if (checkAll) return playersStream.allMatch(player -> isGlowing(entity, player));
+		else return playersStream.anyMatch(player -> isGlowing(entity, player));
 	}
 
 	/**
 	 * Get the glow-color of an entity
 	 *
-	 * @param entity   {@link Entity} to get the color for
+	 * @param entity {@link Entity} to get the color for
 	 * @param player {@link Player} player of the color (as used in the setGlowing methods)
 	 * @return the {@link GlowAPI.Color}, or <code>null</code> if the entity doesn't appear glowing to the player
 	 */
@@ -354,7 +347,7 @@ public class GlowAPI extends JavaPlugin {
 	/**
 	 * Initializes the teams for a player
 	 *
-	 * @param player      {@link Player} player
+	 * @param player        {@link Player} player
 	 * @param tagVisibility visibility of the name-tag (always, hideForOtherTeams, hideForOwnTeam, never)
 	 * @param push          push behaviour (always, pushOtherTeams, pushOwnTeam, never)
 	 */
@@ -362,9 +355,9 @@ public class GlowAPI extends JavaPlugin {
 	public static void initTeam(@NotNull Player player,
 								@NotNull NameTagVisibility tagVisibility,
 								@NotNull TeamPush push) {
-		for (GlowAPI.Color color : GlowAPI.Color.values()) {
-			GlowAPI.sendTeamPacket(null, color, true, false, tagVisibility, push, player);
-		}
+		Arrays.stream(Color.values())
+			.parallel()
+			.forEach(color -> GlowAPI.sendTeamPacket(null, color, true, false, tagVisibility, push, player));
 	}
 
 	/**
@@ -379,13 +372,13 @@ public class GlowAPI extends JavaPlugin {
 
 	/**
 	 *
-	 * @param entity
-	 * @param color
-	 * @param createNewTeam - If true, we don't add any entities
-	 * @param addEntity - true->add the entity, false->remove the entity
-	 * @param tagVisibility
-	 * @param push
-	 * @param player
+	 * @param entity 		{@link Entity} Entity to set glowing status of
+	 * @param color 		{@link GlowAPI.Color} Color of glow
+	 * @param createNewTeam If true, we don't add any entities
+	 * @param addEntity 	true->add the entity, false->remove the entity
+	 * @param tagVisibility {@link NameTagVisibility} Name tag visiblity for team
+	 * @param push 			{@link TeamPush} Collision options for team
+	 * @param player 		{@link Player} Player packet is targeted at
 	 */
 	protected static void sendTeamPacket(@Nullable Entity entity,
 										 @NotNull GlowAPI.Color color,
