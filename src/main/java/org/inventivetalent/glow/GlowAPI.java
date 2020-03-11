@@ -18,6 +18,7 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.inventivetalent.glow.callables.EntityById;
+import org.inventivetalent.glow.callables.InitTeams;
 import org.inventivetalent.glow.callables.SendGlowPacket;
 import org.inventivetalent.glow.callables.SendTeamPacket;
 import org.inventivetalent.glow.callables.SetGlowing;
@@ -29,7 +30,6 @@ import org.inventivetalent.glow.packetwrappers.WrapperPlayServerScoreboardTeam.T
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Map;
 import java.util.UUID;
@@ -455,30 +455,50 @@ public class GlowAPI extends JavaPlugin {
 		}
 	}
 
+	@NotNull
+	public static Future<Void> initTeamsAsync(@NotNull Player player,
+										      @NotNull NameTagVisibility nameTagVisibility,
+										      @NotNull TeamPush teamPush) {
+		ExecutorService service = GlowAPI.getPlugin().getService();
+		Callable<Void> call = new InitTeams(player, nameTagVisibility, teamPush);
+		return service.submit(call);
+	}
 	/**
 	 * Initializes the teams for a player
 	 *
-	 * @param player        {@link Player} player
-	 * @param tagVisibility visibility of the name-tag (always, hideForOtherTeams, hideForOwnTeam, never)
-	 * @param push          push behaviour (always, pushOtherTeams, pushOwnTeam, never)
+	 * @param player            {@link Player} player
+	 * @param nameTagVisibility {@link NameTagVisibility} visibility of the name-tag
+	 * @param teamPush          {@link TeamPush} push behaviour
 	 */
 	@SuppressWarnings("unused")
-	public static void initTeam(@NotNull Player player,
-								@NotNull NameTagVisibility tagVisibility,
-								@NotNull TeamPush push) {
-		Arrays.stream(Color.values())
-			.parallel()
-			.forEach(color -> GlowAPI.sendTeamPacket(null, color, true, false, tagVisibility, push, player));
+	public static void initTeams(@NotNull Player player,
+								 @NotNull NameTagVisibility nameTagVisibility,
+								 @NotNull TeamPush teamPush) {
+		Future<Void> future = initTeamsAsync(player, nameTagVisibility, teamPush);
+		try {
+			future.get();
+		} catch (InterruptedException | ExecutionException e) {
+			throw new RuntimeException(e);
+		}
 	}
 
+	@NotNull
+	public static Future<Void> initTeamsAsync(@NotNull Player player) {
+		return initTeamsAsync(player, NameTagVisibility.ALWAYS, TeamPush.ALWAYS);
+	}
 	/**
 	 * Initializes the teams for a player
 	 *
 	 * @param player {@link Player} player
 	 */
 	@SuppressWarnings("unused")
-	public static void initTeam(@NotNull Player player) {
-		initTeam(player, NameTagVisibility.ALWAYS, TeamPush.ALWAYS);
+	public static void initTeams(@NotNull Player player) {
+		Future<Void> future = initTeamsAsync(player);
+		try {
+			future.get();
+		} catch (InterruptedException | ExecutionException e) {
+			throw new RuntimeException(e);
+		}
 	}
 
 	@NotNull
