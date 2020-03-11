@@ -10,6 +10,7 @@ import org.jetbrains.annotations.NotNull;
 public class PlayerJoinListener implements Listener {
 
     @EventHandler(ignoreCancelled = true, priority = EventPriority.MONITOR)
+    @SuppressWarnings("unused")
     public void onPlayerJoin(@NotNull PlayerJoinEvent event) {
         GlowAPI.initTeam(event.getPlayer());
     }

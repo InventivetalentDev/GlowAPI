@@ -33,11 +33,13 @@ import org.jetbrains.annotations.Nullable;
 public class WrapperPlayServerEntityMetadata extends AbstractPacket {
     public static final PacketType TYPE = PacketType.Play.Server.ENTITY_METADATA;
 
+    @SuppressWarnings("unused")
     public WrapperPlayServerEntityMetadata() {
         super(new PacketContainer(TYPE), TYPE);
         handle.getModifier().writeDefaults();
     }
 
+    @SuppressWarnings("unused")
     public WrapperPlayServerEntityMetadata(@NotNull PacketContainer packet) {
         super(packet, TYPE);
     }
@@ -49,6 +51,7 @@ public class WrapperPlayServerEntityMetadata extends AbstractPacket {
      *
      * @return The current Entity ID
      */
+    @SuppressWarnings("unused")
     public int getEntityID() {
         return handle.getIntegers().read(0);
     }
@@ -58,6 +61,7 @@ public class WrapperPlayServerEntityMetadata extends AbstractPacket {
      *
      * @param value - new value.
      */
+    @SuppressWarnings("unused")
     public void setEntityID( int value) {
         handle.getIntegers().write(0, value);
     }
@@ -69,6 +73,7 @@ public class WrapperPlayServerEntityMetadata extends AbstractPacket {
      * @return The spawned entity.
      */
     @NotNull
+    @SuppressWarnings("unused")
     public Entity getEntity(@NotNull World world) {
         return handle.getEntityModifier(world).read(0);
     }
@@ -80,6 +85,7 @@ public class WrapperPlayServerEntityMetadata extends AbstractPacket {
      * @return The spawned entity.
      */
     @NotNull
+    @SuppressWarnings("unused")
     public Entity getEntity(@NotNull PacketEvent event) {
         return getEntity(event.getPlayer().getWorld());
     }
@@ -90,6 +96,7 @@ public class WrapperPlayServerEntityMetadata extends AbstractPacket {
      * @return The current Metadata
      */
     @Nullable
+    @SuppressWarnings("unused")
     public List<WrappedWatchableObject> getMetadata() {
         return handle.getWatchableCollectionModifier().read(0);
     }
@@ -99,6 +106,7 @@ public class WrapperPlayServerEntityMetadata extends AbstractPacket {
      *
      * @param value - new value.
      */
+    @SuppressWarnings("unused")
     public void setMetadata(@NotNull List<WrappedWatchableObject> value) {
         handle.getWatchableCollectionModifier().write(0, value);
     }

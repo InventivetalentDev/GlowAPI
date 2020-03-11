@@ -65,6 +65,7 @@ public abstract class AbstractPacket {
      * @param player - the receiver.
      * @throws RuntimeException If the packet cannot be sent.
      */
+    @SuppressWarnings("unused")
     public void sendPacket(@NotNull Player player) {
         try {
             ProtocolLibrary.getProtocolManager().sendServerPacket(player, getHandle());
@@ -76,6 +77,7 @@ public abstract class AbstractPacket {
     /**
      * Send the current packet to all online players.
      */
+    @SuppressWarnings("unused")
     public void broadcastPacket() {
         ProtocolLibrary.getProtocolManager().broadcastServerPacket(getHandle());
     }
@@ -86,6 +88,7 @@ public abstract class AbstractPacket {
      * @param player - the sender.
      * @throws RuntimeException if the packet cannot be received.
      */
+    @SuppressWarnings("unused")
     public void receivePacket(@NotNull Player player) {
         try {
             ProtocolLibrary.getProtocolManager().recieveClientPacket(player, getHandle());

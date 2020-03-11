@@ -12,6 +12,7 @@ import org.jetbrains.annotations.NotNull;
 public class PlayerQuitListener implements Listener {
 
     @EventHandler(ignoreCancelled = true, priority = EventPriority.MONITOR)
+    @SuppressWarnings("unused")
     public void onPlayerQuit(@NotNull PlayerQuitEvent event) {
         for (Player receiver : Bukkit.getOnlinePlayers()) {
             if (GlowAPI.isGlowing(event.getPlayer(), receiver)) {

@@ -41,6 +41,7 @@ public class WrapperPlayServerScoreboardTeam extends AbstractPacket {
      * 
      * @author Kristian
      */
+    @SuppressWarnings("unused")
     public enum Modes {
         TEAM_CREATED(0),
         TEAM_REMOVED(1),
@@ -63,6 +64,7 @@ public class WrapperPlayServerScoreboardTeam extends AbstractPacket {
         }
     }
 
+    @SuppressWarnings("unused")
     public enum TeamPush {
         ALWAYS("always"),
         PUSH_OTHER_TEAMS("pushOtherTeams"),
@@ -76,6 +78,7 @@ public class WrapperPlayServerScoreboardTeam extends AbstractPacket {
         }
     }
 
+    @SuppressWarnings("unused")
     public enum NameTagVisibility {
         ALWAYS("always"),
         HIDE_FOR_OTHER_TEAMS("hideForOtherTeams"),
@@ -88,12 +91,14 @@ public class WrapperPlayServerScoreboardTeam extends AbstractPacket {
             this.nameTagVisibility = nameTagVisibility;
         }
     }
-    
+
+    @SuppressWarnings("unused")
     public WrapperPlayServerScoreboardTeam() {
         super(new PacketContainer(TYPE), TYPE);
         handle.getModifier().writeDefaults();
     }
 
+    @SuppressWarnings("unused")
     public WrapperPlayServerScoreboardTeam(@NotNull PacketContainer packet) {
         super(packet, TYPE);
     }
@@ -111,6 +116,7 @@ public class WrapperPlayServerScoreboardTeam extends AbstractPacket {
      * Set an unique name for the team. (Shared with scoreboard)..
      * @param value - new value.
     */
+    @SuppressWarnings("unused")
     public void setName(@NotNull String value) {
         handle.getStrings().write(0, value);
     }
@@ -122,6 +128,7 @@ public class WrapperPlayServerScoreboardTeam extends AbstractPacket {
      * @return The current packet mode.
     */
     @Nullable
+    @SuppressWarnings("unused")
     public Modes getPacketMode() {
         return Modes.valueOf(handle.getIntegers().read(0));
     }
@@ -132,6 +139,7 @@ public class WrapperPlayServerScoreboardTeam extends AbstractPacket {
      * This determines whether or not team information is added or removed.
      * @param value - new value.
     */
+    @SuppressWarnings("unused")
     public void setPacketMode(@NotNull Modes value) {
         handle.getIntegers().write(0, value.packetMode);
     }
@@ -143,6 +151,7 @@ public class WrapperPlayServerScoreboardTeam extends AbstractPacket {
      * @return The current display name.
     */
     @NotNull
+    @SuppressWarnings("unused")
     public String getTeamDisplayName() {
         return handle.getChatComponents().read(0).toString();
     }
@@ -153,6 +162,7 @@ public class WrapperPlayServerScoreboardTeam extends AbstractPacket {
      * A team must be created or updated.
      * @param value - new value.
     */
+    @SuppressWarnings("unused")
     public void setTeamDisplayName(@NotNull String value) {
         handle.getChatComponents().write(0, WrappedChatComponent.fromText(value));
     }
@@ -164,6 +174,7 @@ public class WrapperPlayServerScoreboardTeam extends AbstractPacket {
      * @return The current Team Prefix
     */
     @NotNull
+    @SuppressWarnings("unused")
     public String getTeamPrefix() {
         return handle.getChatComponents().read(1).toString();
     }
@@ -174,6 +185,7 @@ public class WrapperPlayServerScoreboardTeam extends AbstractPacket {
      * A team must be created or updated.
      * @param value - new value.
     */
+    @SuppressWarnings("unused")
     public void setTeamPrefix(@NotNull String value) {
         handle.getChatComponents().write(1, WrappedChatComponent.fromText(value));
     }
@@ -184,6 +196,7 @@ public class WrapperPlayServerScoreboardTeam extends AbstractPacket {
      * @return The current Team Suffix
      */
     @NotNull
+    @SuppressWarnings("unused")
     public String getTeamSuffix() {
         return handle.getChatComponents().read(2).toString();
     }
@@ -194,6 +207,7 @@ public class WrapperPlayServerScoreboardTeam extends AbstractPacket {
      * A team must be created or updated.
      * @param value - new value.
      */
+    @SuppressWarnings("unused")
     public void setTeamSuffix(@NotNull String value) {
         handle.getChatComponents().write(2, WrappedChatComponent.fromText(value));
     }
@@ -204,6 +218,8 @@ public class WrapperPlayServerScoreboardTeam extends AbstractPacket {
      * A team must be created or updated.
      * @return The current Friendly fire
      */
+    @NotNull
+    @SuppressWarnings("unused")
     public boolean getAllowFriendlyFire() {
         return ((handle.getIntegers().read(1).byteValue() & ALLOW_FRIENDLY_FIRE) != 0);
     }
@@ -214,6 +230,7 @@ public class WrapperPlayServerScoreboardTeam extends AbstractPacket {
      * A team must be created or updated.
      * @param value - new value.
      */
+    @SuppressWarnings("unused")
     public void setAllowFriendlyFire(boolean value) {
         int packOptionData = handle.getIntegers().read(1);
         packOptionData = value ? (packOptionData | ALLOW_FRIENDLY_FIRE) : (packOptionData & ~ALLOW_FRIENDLY_FIRE);
@@ -226,6 +243,8 @@ public class WrapperPlayServerScoreboardTeam extends AbstractPacket {
      * A team must be created or updated.
      * @return The current Friendly fire
      */
+    @NotNull
+    @SuppressWarnings("unused")
     public boolean getCanSeeFriendlyInvisibles() {
         return ((handle.getIntegers().read(1).byteValue() & CAN_SEE_FRIENDLY_INVISIBLES) != 0);
     }
@@ -236,6 +255,7 @@ public class WrapperPlayServerScoreboardTeam extends AbstractPacket {
      * A team must be created or updated.
      * @param value - new value.
      */
+    @SuppressWarnings("unused")
     public void setCanSeeFriendlyInvisibles(boolean value) {
         int packOptionData = handle.getIntegers().read(1);
         packOptionData = value ? (packOptionData | CAN_SEE_FRIENDLY_INVISIBLES) : (packOptionData & ~CAN_SEE_FRIENDLY_INVISIBLES);
@@ -270,6 +290,7 @@ public class WrapperPlayServerScoreboardTeam extends AbstractPacket {
      * </ul>
      * @param players - A list of entries.
     */
+    @SuppressWarnings("unused")
     public void setEntries(@NotNull Collection<String> players) {
     	handle.getSpecificModifier(Collection.class).write(0, players);
     }
@@ -280,7 +301,9 @@ public class WrapperPlayServerScoreboardTeam extends AbstractPacket {
      * A team must be created or updated.
      * @return The current color
      */
-    @NotNull public ChatColor getTeamColor() {
+    @NotNull
+    @SuppressWarnings("unused")
+    public ChatColor getTeamColor() {
         return handle.getEnumModifier(ChatColor.class, EnumChatFormat).read(0);
     }
 
@@ -290,22 +313,29 @@ public class WrapperPlayServerScoreboardTeam extends AbstractPacket {
      * A team must be created or updated.
      * @param value - new value.
      */
+    @SuppressWarnings("unused")
     public void setTeamColor(@NotNull ChatColor value) {
         handle.getEnumModifier(ChatColor.class, EnumChatFormat).write(0, value);
     }
 
-    @NotNull public TeamPush getTeamPush() {
+    @NotNull
+    @SuppressWarnings("unused")
+    public TeamPush getTeamPush() {
         return TeamPush.valueOf(handle.getStrings().read(1));
     }
 
+    @SuppressWarnings("unused")
     public void setTeamPush(@NotNull TeamPush value) {
         handle.getStrings().write(1, value.toString());
     }
 
-    @NotNull public NameTagVisibility getNameTagVisibility() {
+    @NotNull
+    @SuppressWarnings("unused")
+    public NameTagVisibility getNameTagVisibility() {
         return NameTagVisibility.valueOf(handle.getStrings().read(2));
     }
 
+    @SuppressWarnings("unused")
     public void setNameTagVisibility(@NotNull NameTagVisibility value) {
         handle.getStrings().write(2, value.toString());
     }
