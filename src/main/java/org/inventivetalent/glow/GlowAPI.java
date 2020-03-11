@@ -15,7 +15,6 @@ import lombok.Getter;
 import org.bstats.bukkit.MetricsLite;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
-import org.bukkit.OfflinePlayer;
 import org.bukkit.World;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
@@ -26,6 +25,7 @@ import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.inventivetalent.glow.callables.EntityById;
 import org.inventivetalent.glow.callables.SendTeamPacket;
+import org.inventivetalent.glow.callables.SetGlowing;
 import org.inventivetalent.glow.listeners.EntityMetadataListener;
 import org.inventivetalent.glow.listeners.PlayerJoinListener;
 import org.inventivetalent.glow.listeners.PlayerQuitListener;
@@ -48,6 +48,7 @@ import java.util.stream.Stream;
 public class GlowAPI extends JavaPlugin {
 	public static final byte ENTITY_GLOWING_EFFECT = (byte) 0x40;
 
+	@Getter
 	private static final Map<UUID, GlowData> dataMap = new ConcurrentHashMap<>();
 	private static final Serializer dataWatcherByteSerializer = WrappedDataWatcher.Registry.get(Byte.class);
 
@@ -136,6 +137,16 @@ public class GlowAPI extends JavaPlugin {
 		service.shutdown();
 	}
 
+	public static Future<Void> setGlowingAsync(@Nullable Entity entity,
+   										       @Nullable GlowAPI.Color color,
+											   @NotNull NameTagVisibility nameTagVisibility,
+											   @NotNull TeamPush teamPush,
+											   @Nullable Player player) {
+		ExecutorService service = GlowAPI.getPlugin().getService();
+		Callable<Void> call = new SetGlowing(entity, color, nameTagVisibility, teamPush, player);
+		return service.submit(call);
+	}
+
 	/**
 	 * Set the glowing-color of an entity
 	 *
@@ -151,47 +162,11 @@ public class GlowAPI extends JavaPlugin {
 								  @NotNull NameTagVisibility tagVisibility,
 								  @NotNull TeamPush push,
 								  @Nullable Player player) {
-		if (player == null) return;
-
-		boolean glowing = color != null;
-		if (entity == null) glowing = false;
-		if (entity instanceof OfflinePlayer) {
-			if (!((OfflinePlayer) entity).isOnline()) glowing = false;
-		}
-
-		final UUID entityUniqueId = (entity == null) ? null : entity.getUniqueId();
-		final boolean wasGlowing = dataMap.containsKey(entityUniqueId);
-		final GlowData glowData = (wasGlowing && entity != null) ? dataMap.get(entityUniqueId) : new GlowData();
-		final UUID playerUniqueId = player.getUniqueId();
-		final GlowAPI.Color oldColor = wasGlowing ? glowData.colorMap.get(playerUniqueId) : null;
-
-		if (glowing) glowData.colorMap.put(playerUniqueId, color);
-		else glowData.colorMap.remove(playerUniqueId);
-
-		if (glowData.colorMap.isEmpty()) dataMap.remove(entityUniqueId);
-		else if (entity != null) dataMap.put(entityUniqueId, glowData);
-
-		if (color != null && oldColor == color) return;
-		if (entity == null) return;
-		if (entity instanceof OfflinePlayer) {
-			if (!((OfflinePlayer) entity).isOnline()) return;
-		}
-		if (!player.isOnline()) return;
-
-		sendGlowPacket(entity, glowing, player);
-
-		final boolean createNewTeam = false;
-		if (oldColor != null) {
-			//We never add to NONE, so no need to remove
-			if (oldColor != GlowAPI.Color.NONE) {
-				final boolean addEntity = false;
-				//use the old color to remove the player from its team
-				sendTeamPacket(entity, oldColor, createNewTeam, addEntity, tagVisibility, push, player);
-			}
-		}
-		if (glowing) {
-			final boolean addEntity = color != GlowAPI.Color.NONE;
-			sendTeamPacket(entity, color, createNewTeam, addEntity, tagVisibility, push, player);
+		Future<Void> future = setGlowingAsync(entity, color, tagVisibility, push, player);
+		try {
+			future.get();
+		} catch (InterruptedException | ExecutionException e) {
+			throw new RuntimeException(e);
 		}
 	}
 
@@ -335,9 +310,9 @@ public class GlowAPI extends JavaPlugin {
 		return data.colorMap.get(player.getUniqueId());
 	}
 
-	protected static void sendGlowPacket(@NotNull Entity entity,
-										 boolean glowing,
-										 @NotNull Player player) {
+	public static void sendGlowPacket(@NotNull Entity entity,
+									  boolean glowing,
+									  @NotNull Player player) {
 		final PacketContainer packet = new PacketContainer(PacketType.Play.Server.ENTITY_METADATA);
 		final WrapperPlayServerEntityMetadata wrappedPacket = new WrapperPlayServerEntityMetadata(packet);
 		final WrappedDataWatcherObject dataWatcherObject = new WrappedDataWatcherObject(0, dataWatcherByteSerializer);
@@ -411,13 +386,13 @@ public class GlowAPI extends JavaPlugin {
 	 * @param push 			{@link TeamPush} Collision options for team
 	 * @param player 		{@link Player} Player packet is targeted at
 	 */
-	protected static void sendTeamPacket(@Nullable Entity entity,
-										 @NotNull GlowAPI.Color color,
-										 boolean createNewTeam,
-										 boolean addEntity,
-										 @NotNull NameTagVisibility tagVisibility,
-										 @NotNull TeamPush push,
-										 @NotNull Player player) {
+	public static void sendTeamPacket(@Nullable Entity entity,
+									  @NotNull GlowAPI.Color color,
+									  boolean createNewTeam,
+									  boolean addEntity,
+									  @NotNull NameTagVisibility tagVisibility,
+									  @NotNull TeamPush push,
+									  @NotNull Player player) {
 		Future<Void> future = sendTeamPacketAsync(entity, color, createNewTeam, addEntity, tagVisibility, push, player);
 		try {
 			future.get();
