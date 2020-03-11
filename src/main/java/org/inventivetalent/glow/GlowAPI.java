@@ -11,6 +11,7 @@ import com.comphenix.protocol.wrappers.WrappedDataWatcher;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher.Serializer;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher.WrappedDataWatcherObject;
 import com.comphenix.protocol.wrappers.WrappedWatchableObject;
+import lombok.Getter;
 import org.bstats.bukkit.MetricsLite;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -23,6 +24,7 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.inventivetalent.glow.callables.EntityById;
 import org.inventivetalent.glow.listeners.EntityMetadataListener;
 import org.inventivetalent.glow.listeners.PlayerJoinListener;
 import org.inventivetalent.glow.listeners.PlayerQuitListener;
@@ -41,7 +43,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.*;
 import java.util.stream.Stream;
 
 public class GlowAPI extends JavaPlugin {
@@ -56,6 +58,9 @@ public class GlowAPI extends JavaPlugin {
 	private ProtocolManager protocolManager;
 	private AsynchronousManager asynchronousManager;
 	private AsyncListenerHandler entityMetadataListenerHandler;
+
+	@Getter
+	private ExecutorService service;
 
 	/**
 	 * Team Colors
@@ -116,6 +121,8 @@ public class GlowAPI extends JavaPlugin {
 		final PacketListener entityMetadataListener = new EntityMetadataListener();
 		entityMetadataListenerHandler = asynchronousManager.registerAsyncHandler(entityMetadataListener);
 		entityMetadataListenerHandler.syncStart();
+
+		service = Executors.newSingleThreadExecutor();
 	}
 
 	@Override
@@ -124,6 +131,8 @@ public class GlowAPI extends JavaPlugin {
 		PlayerQuitEvent.getHandlerList().unregister(playerQuitListener);
 
 		asynchronousManager.unregisterAsyncHandler(entityMetadataListenerHandler);
+
+		service.shutdown();
 	}
 
 	/**
@@ -434,16 +443,25 @@ public class GlowAPI extends JavaPlugin {
 		}
 	}
 
-	@SuppressWarnings("unused")
 	@Nullable
+	@SuppressWarnings("unused")
+	public static Future<Entity> getEntityByIdAsync(@NotNull World world,
+													int entityId) {
+		ExecutorService service = GlowAPI.getPlugin().getService();
+		Callable<Entity> call = new EntityById(world, entityId);
+		return service.submit(call);
+	}
+
+	@Nullable
+	@SuppressWarnings("unused")
 	public static Entity getEntityById(@NotNull World world,
 									   int entityId) {
-		return world
-			.getEntities()
-			.parallelStream()
-			.filter(entity -> entity.getEntityId() == entityId)
-			.findAny()
-			.orElse(null);
+		Future<Entity> future = getEntityByIdAsync(world, entityId)
+		try {
+			return future.get();
+		} catch (InterruptedException | ExecutionException e) {
+			e.printStackTrace();
+		}
 	}
 
 }

@@ -99,6 +99,14 @@
             <scope>provided</scope>
         </dependency>
 
+        <!-- Lombok -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>1.18.12</version>
+            <scope>provided</scope>
+        </dependency>
+
         <!-- Nullable/NotNull -->
         <dependency>
             <groupId>org.jetbrains</groupId>
