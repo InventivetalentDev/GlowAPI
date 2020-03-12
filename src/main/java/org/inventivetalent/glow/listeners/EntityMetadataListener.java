@@ -1,15 +1,21 @@
 package org.inventivetalent.glow.listeners;
 
 import com.comphenix.protocol.PacketType;
-import com.comphenix.protocol.events.*;
+import com.comphenix.protocol.events.ListenerPriority;
+import com.comphenix.protocol.events.ListeningWhitelist;
+import com.comphenix.protocol.events.PacketContainer;
+import com.comphenix.protocol.events.PacketEvent;
+import com.comphenix.protocol.events.PacketListener;
 import com.comphenix.protocol.injector.GamePhase;
 import com.comphenix.protocol.wrappers.WrappedWatchableObject;
+import org.bukkit.World;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.inventivetalent.glow.GlowAPI;
 import org.inventivetalent.glow.packetwrappers.WrapperPlayServerEntityMetadata;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
@@ -33,7 +39,7 @@ public class EntityMetadataListener implements PacketListener {
 
         Player player = packetEvent.getPlayer();
 
-        final Entity entity = GlowAPI.getEntityById(player.getWorld(), entityId);
+        final Entity entity = getEntityById(player.getWorld(), entityId);
         if (entity == null) return;
 
         //Check if the entity is glowing
@@ -76,6 +82,17 @@ public class EntityMetadataListener implements PacketListener {
     @NotNull
     public Plugin getPlugin() {
         return GlowAPI.getPlugin();
+    }
+
+    @Nullable
+    private static Entity getEntityById(@NotNull World world,
+                                        int entityId) {
+        return world
+            .getEntities()
+            .parallelStream()
+            .filter(entity -> entity.getEntityId() == entityId)
+            .findAny()
+            .orElse(null);
     }
 
 }
