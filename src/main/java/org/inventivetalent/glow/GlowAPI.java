@@ -90,7 +90,7 @@ public class GlowAPI extends JavaPlugin {
 		NONE(ChatColor.RESET);
 
 		@Getter
-		ChatColor chatColor;
+		final ChatColor chatColor;
 
 		Color(@NotNull ChatColor chatColor) {
 			this.chatColor = chatColor;
@@ -536,7 +536,7 @@ public class GlowAPI extends JavaPlugin {
 				wrappedPacket.setTeamDisplayName(teamName);
 				wrappedPacket.setTeamSuffix("");
 				wrappedPacket.setAllowFriendlyFire(true);
-				wrappedPacket.setCanSeeFriendlyInvisibles(false);
+				wrappedPacket.setCanSeeFriendlyInvisible(false);
 			} else {
 				if (entity == null) return;
 				//Add/remove entries

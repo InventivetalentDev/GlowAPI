@@ -10,7 +10,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class GlowData {
 
 	//Maps player-UUID to Color
-	public Map<UUID, GlowAPI.Color> colorMap = new ConcurrentHashMap<>();
+	public final Map<UUID, GlowAPI.Color> colorMap = new ConcurrentHashMap<>();
 
 	@Override
 	public boolean equals(@Nullable Object o) {
@@ -24,6 +24,6 @@ public class GlowData {
 
 	@Override
 	public int hashCode() {
-		return colorMap != null ? colorMap.hashCode() : 0;
+		return colorMap.hashCode();
 	}
 }
