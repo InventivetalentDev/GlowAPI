@@ -64,7 +64,6 @@
                             <artifactSet>
                                 <includes>
                                     <include>org.bstats:*</include>
-                                    <include>org.inventivetalent:glowapi**</include>
                                 </includes>
                             </artifactSet>
                             <relocations>

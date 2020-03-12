@@ -130,10 +130,8 @@ public class GlowAPI extends JavaPlugin {
 														  @Nullable GlowAPI.Color color,
 											              @NotNull NameTagVisibility nameTagVisibility,
 											              @NotNull TeamPush teamPush,
-											              @Nullable Player player) {
+											              @NotNull Player player) {
 		return CompletableFuture.supplyAsync(() -> {
-			if (player == null) return null;
-
 			boolean glowing = color != null;
 			if (entity == null) glowing = false;
 			if (entity instanceof OfflinePlayer) {
@@ -175,9 +173,81 @@ public class GlowAPI extends JavaPlugin {
 				final boolean addEntity = color != Color.NONE;
 				future.thenRun(() -> GlowAPI.sendTeamPacketAsync(entity, color, createNewTeam, addEntity, nameTagVisibility, teamPush, player).join());
 			}
+
 			future.join();
+
 			return null;
 		});
+	}
+
+	@NotNull
+	public static CompletableFuture<Void> setGlowingAsync(@NotNull Collection<? extends Entity> entities,
+														  @Nullable GlowAPI.Color color,
+														  @NotNull NameTagVisibility nameTagVisibility,
+														  @NotNull TeamPush teamPush,
+														  @NotNull Player player) {
+		Map<GlowAPI.Color, Collection<Entity>> removeFromTeam = new ConcurrentHashMap<>();
+		Collection<Entity> addToTeam = ConcurrentHashMap.newKeySet();
+
+		CompletableFuture<Void> future = CompletableFuture.allOf(entities
+			.parallelStream()
+			.map(entity -> {
+				boolean glowing = color != null;
+				if (entity == null) glowing = false;
+				if (entity instanceof OfflinePlayer) {
+					if (!((OfflinePlayer) entity).isOnline()) glowing = false;
+				}
+
+				final UUID entityUniqueId = (entity == null) ? null : entity.getUniqueId();
+				final Map<UUID, GlowData> dataMap = GlowAPI.getDataMap();
+				final boolean wasGlowing = dataMap.containsKey(entityUniqueId);
+				final GlowData glowData = (wasGlowing && entity != null) ? dataMap.get(entityUniqueId) : new GlowData();
+				final UUID playerUniqueId = player.getUniqueId();
+				final Color oldColor = wasGlowing ? glowData.colorMap.get(playerUniqueId) : null;
+
+				if (glowing) glowData.colorMap.put(playerUniqueId, color);
+				else glowData.colorMap.remove(playerUniqueId);
+
+				if (glowData.colorMap.isEmpty()) dataMap.remove(entityUniqueId);
+				else if (entity != null) dataMap.put(entityUniqueId, glowData);
+
+				if (color != null && oldColor == color) return null;
+				if (entity == null) return null;
+				if (entity instanceof OfflinePlayer) {
+					if (!((OfflinePlayer) entity).isOnline()) return null;
+				}
+				if (!player.isOnline()) return null;
+
+				if (glowing) addToTeam.add(entity);
+
+				if (oldColor != null) {
+					//We never add to NONE, so no need to remove
+					if (oldColor != Color.NONE) {
+						if (!removeFromTeam.containsKey(oldColor)) {
+							removeFromTeam.putIfAbsent(oldColor, ConcurrentHashMap.newKeySet());
+						}
+						Collection<Entity> teamEntities = removeFromTeam.get(oldColor);
+						teamEntities.add(entity);
+					}
+				}
+
+				return GlowAPI.sendGlowPacketAsync(entity, glowing, player);
+			})
+			.toArray(CompletableFuture[]::new));
+
+		removeFromTeam
+			.entrySet()
+			.parallelStream()
+			.forEach(entry -> {
+				future.thenRun(() -> GlowAPI.sendTeamPacketAsync(entry.getValue(), entry.getKey(), false, nameTagVisibility, teamPush, player).join());
+			});
+
+		if (!addToTeam.isEmpty()) {
+			final boolean addEntity = color != Color.NONE;
+			future.thenRun(() -> GlowAPI.sendTeamPacketAsync(addToTeam, color, addEntity, nameTagVisibility, teamPush, player).join());
+		}
+
+		return future;
 	}
 
 	@SuppressWarnings("unused")
@@ -415,6 +485,50 @@ public class GlowAPI extends JavaPlugin {
 				Collection<String> entries = wrappedPacket.getEntries();
 				entries.add(entry);
 			}
+
+			try {
+				GlowAPI.getPlugin().getProtocolManager().sendServerPacket(player, packet);
+			} catch (InvocationTargetException e) {
+				throw new RuntimeException("Unable to send team packet to player " + player.toString(), e);
+			}
+			return null;
+		});
+	}
+
+	@NotNull
+	public static CompletableFuture<Void> sendTeamPacketAsync(@NotNull Collection<? extends Entity> entities,
+															  @NotNull GlowAPI.Color color,
+															  boolean addEntity,
+															  @NotNull NameTagVisibility nameTagVisibility,
+															  @NotNull TeamPush teamPush,
+															  @NotNull Player player) {
+		return CompletableFuture.supplyAsync(() -> {
+			final PacketContainer packet = new PacketContainer(PacketType.Play.Server.SCOREBOARD_TEAM);
+			final WrapperPlayServerScoreboardTeam wrappedPacket = new WrapperPlayServerScoreboardTeam(packet);
+
+			Modes packetMode;
+			if (addEntity) packetMode = Modes.PLAYERS_ADDED;
+			else packetMode = Modes.PLAYERS_REMOVED;
+
+			final String teamName = color.getTeamName();
+
+			wrappedPacket.setPacketMode(packetMode);
+			wrappedPacket.setName(teamName);
+			wrappedPacket.setNameTagVisibility(nameTagVisibility);
+			wrappedPacket.setTeamPush(teamPush);
+
+			Collection<String> entries = wrappedPacket.getEntries();
+			entities
+				.parallelStream()
+				.map(entity -> {
+					if (entity instanceof OfflinePlayer) {
+						//Players still use the name...
+						return entity.getName();
+					} else {
+						return entity.getUniqueId().toString();
+					}
+				})
+				.forEach(entries::add);
 
 			try {
 				GlowAPI.getPlugin().getProtocolManager().sendServerPacket(player, packet);
