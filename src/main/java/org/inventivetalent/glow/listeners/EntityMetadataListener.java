@@ -50,7 +50,6 @@ public class EntityMetadataListener implements PacketListener {
         final Object entityObj = wrappedEntityObj.getValue();
         if (!(entityObj instanceof Byte)) return;
         byte entityByte = (byte) entityObj;
-        /*Maybe use the isGlowing result*/
         entityByte = (byte) (entityByte | GlowAPI.ENTITY_GLOWING_EFFECT);
         wrappedEntityObj.setValue(entityByte);
     }

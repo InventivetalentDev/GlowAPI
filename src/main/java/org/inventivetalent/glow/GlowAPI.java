@@ -8,6 +8,8 @@ import com.comphenix.protocol.async.AsyncListenerHandler;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.events.PacketListener;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher;
+import com.comphenix.protocol.wrappers.WrappedDataWatcher.Registry;
+import com.comphenix.protocol.wrappers.WrappedDataWatcher.Serializer;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher.WrappedDataWatcherObject;
 import com.comphenix.protocol.wrappers.WrappedWatchableObject;
 import lombok.Getter;
@@ -39,15 +41,18 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Stream;
 
 public class GlowAPI extends JavaPlugin {
-	public static final byte ENTITY_GLOWING_EFFECT = (byte) 0x40;
+	private static final int PLUGIN_ID = 2190;
+	private static final String TEAM_NAME_FORMAT = "GAPI#%s";
+	private static final Serializer BYTE_SERIALIZER = Registry.get(Byte.class);
 
-	private static final WrappedDataWatcher.Serializer byteSerializer = WrappedDataWatcher.Registry.get(Byte.class);
+	public static final byte ENTITY_GLOWING_EFFECT = (byte) 0x40;
 
 	@Getter
 	private static final Map<UUID, GlowData> dataMap = new ConcurrentHashMap<>();
@@ -93,7 +98,7 @@ public class GlowAPI extends JavaPlugin {
 
 		@NotNull
 		public String getTeamName() {
-			String name = String.format("GAPI#%s", name());
+			String name = String.format(TEAM_NAME_FORMAT, name());
 			if (name.length() > 16) {
 				name = name.substring(0, 16);
 			}
@@ -111,7 +116,7 @@ public class GlowAPI extends JavaPlugin {
 
 	@Override
 	public void onEnable() {
-		new MetricsLite(this, 2190);
+		new MetricsLite(this, PLUGIN_ID);
 
 		playerJoinListener = new PlayerJoinListener();
 		playerQuitListener = new PlayerQuitListener();
@@ -136,12 +141,13 @@ public class GlowAPI extends JavaPlugin {
 	}
 
 	@SuppressWarnings("unused")
-	@Nullable public static GlowAPI.Color getGlowColor(@NotNull Entity entity,
-													   @NotNull Player player) {
+	@Nullable public static Color getGlowColor(@NotNull Entity entity,
+											   @NotNull Player player) {
 		final UUID entityUniqueId = entity.getUniqueId();
 		if (!dataMap.containsKey(entityUniqueId)) return null;
 		GlowData data = dataMap.get(entityUniqueId);
-		return data.colorMap.get(player.getUniqueId());
+		final UUID playerUniqueId = player.getUniqueId();
+		return data.colorMap.get(playerUniqueId);
 	}
 
 	@SuppressWarnings("unused")
@@ -161,7 +167,7 @@ public class GlowAPI extends JavaPlugin {
 
 	@SuppressWarnings("unused")
 	public static void setGlowing(@Nullable Entity entity,
-								  @Nullable GlowAPI.Color color,
+								  @Nullable Color color,
 								  @NotNull NameTagVisibility tagVisibility,
 								  @NotNull TeamPush push,
 								  @NotNull Player player) {
@@ -170,7 +176,7 @@ public class GlowAPI extends JavaPlugin {
 
 	@SuppressWarnings("unused")
 	public static void setGlowing(@Nullable Entity entity,
-								  @Nullable GlowAPI.Color color,
+								  @Nullable Color color,
 								  @NotNull Player player) {
 		setGlowingAsync(entity, color, player).join();
 	}
@@ -191,21 +197,21 @@ public class GlowAPI extends JavaPlugin {
 
 	@SuppressWarnings("unused")
 	public static void setGlowing(@Nullable Entity entity,
-								  @Nullable GlowAPI.Color color,
+								  @Nullable Color color,
 								  @NotNull Collection<? extends Player> players) {
 		setGlowingAsync(entity, color, players).join();
 	}
 
 	@SuppressWarnings("unused")
 	public static void setGlowing(@NotNull Collection<? extends Entity> entities,
-								  @Nullable GlowAPI.Color color,
+								  @Nullable Color color,
 								  @NotNull Player player) {
 		setGlowingAsync(entities, color, player).join();
 	}
 
 	@SuppressWarnings("unused")
 	public static void setGlowing(@NotNull Collection<? extends Entity> entities,
-								  @Nullable GlowAPI.Color color,
+								  @Nullable Color color,
 								  @NotNull Collection<? extends Player> players) {
 		setGlowingAsync(entities, color, players).join();
 	}
@@ -224,22 +230,30 @@ public class GlowAPI extends JavaPlugin {
 
 	@NotNull
 	public static CompletableFuture<Void> setGlowingAsync(@Nullable Entity entity,
-														  @Nullable GlowAPI.Color color,
+														  @Nullable Color color,
 											              @NotNull NameTagVisibility nameTagVisibility,
 											              @NotNull TeamPush teamPush,
 											              @NotNull Player player) {
-		return CompletableFuture.supplyAsync(() -> {
+		return CompletableFuture.runAsync(() -> {
 			boolean glowing = color != null;
 			if (entity == null) glowing = false;
 			if (entity instanceof OfflinePlayer) {
-				if (!((OfflinePlayer) entity).isOnline()) glowing = false;
+				final OfflinePlayer offlinePlayer = (OfflinePlayer) entity;
+				if (!offlinePlayer.isOnline()) glowing = false;
 			}
 
-			final UUID entityUniqueId = (entity == null) ? null : entity.getUniqueId();
+			UUID entityUniqueId = null;
+			if (entity != null) entityUniqueId = entity.getUniqueId();
+
 			final Map<UUID, GlowData> dataMap = GlowAPI.getDataMap();
 			final boolean wasGlowing = dataMap.containsKey(entityUniqueId);
-			final GlowData glowData = (wasGlowing && entity != null) ? dataMap.get(entityUniqueId) : new GlowData();
+
+			GlowData glowData;
+			if (wasGlowing && entity != null) glowData = dataMap.get(entityUniqueId);
+			else glowData = new GlowData();
+
 			final UUID playerUniqueId = player.getUniqueId();
+
 			final Color oldColor = wasGlowing ? glowData.colorMap.get(playerUniqueId) : null;
 
 			if (glowing) glowData.colorMap.put(playerUniqueId, color);
@@ -248,12 +262,12 @@ public class GlowAPI extends JavaPlugin {
 			if (glowData.colorMap.isEmpty()) dataMap.remove(entityUniqueId);
 			else if (entity != null) dataMap.put(entityUniqueId, glowData);
 
-			if (color != null && oldColor == color) return null;
-			if (entity == null) return null;
+			if (color != null && oldColor == color) return;
+			if (entity == null) return;
 			if (entity instanceof OfflinePlayer) {
-				if (!((OfflinePlayer) entity).isOnline()) return null;
+				if (!((OfflinePlayer) entity).isOnline()) return;
 			}
-			if (!player.isOnline()) return null;
+			if (!player.isOnline()) return;
 
 			CompletableFuture<Void> future = GlowAPI.sendGlowPacketAsync(entity, glowing, player);
 
@@ -287,18 +301,16 @@ public class GlowAPI extends JavaPlugin {
 			}
 
 			future.join();
-
-			return null;
 		});
 	}
 
 	@NotNull
 	public static CompletableFuture<Void> setGlowingAsync(@NotNull Collection<? extends Entity> entities,
-														  @Nullable GlowAPI.Color color,
+														  @Nullable Color color,
 														  @NotNull NameTagVisibility nameTagVisibility,
 														  @NotNull TeamPush teamPush,
 														  @NotNull Player player) {
-		Map<GlowAPI.Color, Collection<Entity>> removeFromTeam = new ConcurrentHashMap<>();
+		Map<Color, Collection<Entity>> removeFromTeam = new ConcurrentHashMap<>();
 		Collection<Entity> addToTeam = ConcurrentHashMap.newKeySet();
 
 		CompletableFuture<Void> future = CompletableFuture.allOf(entities
@@ -310,11 +322,18 @@ public class GlowAPI extends JavaPlugin {
 					if (!((OfflinePlayer) entity).isOnline()) glowing = false;
 				}
 
-				final UUID entityUniqueId = (entity == null) ? null : entity.getUniqueId();
+				UUID entityUniqueId = null;
+				if (entity != null) entityUniqueId = entity.getUniqueId();
+
 				final Map<UUID, GlowData> dataMap = GlowAPI.getDataMap();
 				final boolean wasGlowing = dataMap.containsKey(entityUniqueId);
-				final GlowData glowData = (wasGlowing && entity != null) ? dataMap.get(entityUniqueId) : new GlowData();
+
+				GlowData glowData;
+				if (wasGlowing && entity != null) glowData = dataMap.get(entityUniqueId);
+				else glowData = new GlowData();
+
 				final UUID playerUniqueId = player.getUniqueId();
+
 				final Color oldColor = wasGlowing ? glowData.colorMap.get(playerUniqueId) : null;
 
 				if (glowing) glowData.colorMap.put(playerUniqueId, color);
@@ -345,6 +364,7 @@ public class GlowAPI extends JavaPlugin {
 
 				return GlowAPI.sendGlowPacketAsync(entity, glowing, player);
 			})
+			.filter(Objects::nonNull)
 			.toArray(CompletableFuture[]::new));
 
 		if (!removeFromTeam.isEmpty()) {
@@ -362,16 +382,19 @@ public class GlowAPI extends JavaPlugin {
 				.toArray(CompletableFuture[]::new)).join());
 		}
 
-		if (!(color == null || addToTeam.isEmpty())) {
+		if (!addToTeam.isEmpty()) {
 			final boolean addEntity = color != Color.NONE;
-			future.thenRun(() -> GlowAPI.sendTeamPacketAsync(
-				addToTeam,
-				color,
-				addEntity,
-				nameTagVisibility,
-				teamPush,
-				player
-			).join());
+			future.thenRun(() -> {
+				assert color != null;
+				GlowAPI.sendTeamPacketAsync(
+					addToTeam,
+					color,
+					addEntity,
+					nameTagVisibility,
+					teamPush,
+					player
+				).join();
+			});
 		}
 
 		return future;
@@ -379,7 +402,7 @@ public class GlowAPI extends JavaPlugin {
 
 	@NotNull
 	public static CompletableFuture<Void> setGlowingAsync(@Nullable Entity entity,
-							         	                  @Nullable GlowAPI.Color color,
+							         	                  @Nullable Color color,
 								                          @NotNull Player player) {
 		return setGlowingAsync(entity, color, NameTagVisibility.ALWAYS, TeamPush.ALWAYS, player);
 	}
@@ -388,7 +411,8 @@ public class GlowAPI extends JavaPlugin {
 	public static CompletableFuture<Void> setGlowingAsync(@Nullable Entity entity,
 								                          boolean glowing,
 								                          @NotNull Player player) {
-		return setGlowingAsync(entity, glowing ? GlowAPI.Color.NONE : null, player);
+		final Color color = glowing ? Color.NONE : null;
+		return setGlowingAsync(entity, color, player);
 	}
 
 	@NotNull
@@ -403,7 +427,7 @@ public class GlowAPI extends JavaPlugin {
 
 	@NotNull
 	public static CompletableFuture<Void> setGlowingAsync(@Nullable Entity entity,
-											              @Nullable GlowAPI.Color color,
+											              @Nullable Color color,
 											              @NotNull Collection<? extends Player> players) {
 		return CompletableFuture.allOf(players
 			.parallelStream()
@@ -413,14 +437,14 @@ public class GlowAPI extends JavaPlugin {
 
 	@NotNull
 	public static CompletableFuture<Void> setGlowingAsync(@NotNull Collection<? extends Entity> entities,
-														  @Nullable GlowAPI.Color color,
+														  @Nullable Color color,
 								                          @NotNull Player player) {
 		return setGlowingAsync(entities, color, NameTagVisibility.ALWAYS, TeamPush.ALWAYS, player);
 	}
 
 	@NotNull
 	public static CompletableFuture<Void> setGlowingAsync(@NotNull Collection<? extends Entity> entities,
-							              	              @Nullable GlowAPI.Color color,
+							              	              @Nullable Color color,
 								                          @NotNull Collection<? extends Player> players) {
 		return CompletableFuture.allOf(players
 			.parallelStream()
@@ -430,12 +454,12 @@ public class GlowAPI extends JavaPlugin {
 
 	@NotNull
 	private static CompletableFuture<Void> sendGlowPacketAsync(@NotNull Entity entity,
-												              boolean glowing,
-												              @NotNull Player player) {
-		return CompletableFuture.supplyAsync(() -> {
+												               boolean glowing,
+												               @NotNull Player player) {
+		return CompletableFuture.runAsync(() -> {
 			final PacketContainer packet = new PacketContainer(PacketType.Play.Server.ENTITY_METADATA);
 			final WrapperPlayServerEntityMetadata wrappedPacket = new WrapperPlayServerEntityMetadata(packet);
-			final WrappedDataWatcherObject dataWatcherObject = new WrappedDataWatcherObject(0, byteSerializer);
+			final WrappedDataWatcherObject dataWatcherObject = new WrappedDataWatcherObject(0, BYTE_SERIALIZER);
 
 			final int invertedEntityId = -entity.getEntityId();
 
@@ -454,12 +478,10 @@ public class GlowAPI extends JavaPlugin {
 			wrappedPacket.setMetadata(metadata);
 
 			try {
-				GlowAPI.getPlugin().getProtocolManager().sendServerPacket(player, packet);
+				getPlugin().getProtocolManager().sendServerPacket(player, packet);
 			} catch (InvocationTargetException e) {
 				throw new RuntimeException("Unable to send entity metadata packet to player " + player.toString(), e);
 			}
-
-			return null;
 		});
 	}
 
@@ -486,13 +508,13 @@ public class GlowAPI extends JavaPlugin {
 
 	@NotNull
 	private static CompletableFuture<Void> sendTeamPacketAsync(@Nullable Entity entity,
-												               @NotNull GlowAPI.Color color,
+												               @NotNull Color color,
 												               boolean createNewTeam,
 												               boolean addEntity,
 												               @NotNull NameTagVisibility nameTagVisibility,
 												               @NotNull TeamPush teamPush,
 												               @NotNull Player player) {
-		return CompletableFuture.supplyAsync(() -> {
+		return CompletableFuture.runAsync(() -> {
 			final PacketContainer packet = new PacketContainer(PacketType.Play.Server.SCOREBOARD_TEAM);
 			final WrapperPlayServerScoreboardTeam wrappedPacket = new WrapperPlayServerScoreboardTeam(packet);
 
@@ -516,7 +538,7 @@ public class GlowAPI extends JavaPlugin {
 				wrappedPacket.setAllowFriendlyFire(true);
 				wrappedPacket.setCanSeeFriendlyInvisibles(false);
 			} else {
-				if (entity == null) return null;
+				if (entity == null) return;
 				//Add/remove entries
 				String entry;
 				if (entity instanceof OfflinePlayer) {
@@ -530,33 +552,32 @@ public class GlowAPI extends JavaPlugin {
 			}
 
 			try {
-				GlowAPI.getPlugin().getProtocolManager().sendServerPacket(player, packet);
+				getPlugin().getProtocolManager().sendServerPacket(player, packet);
 			} catch (InvocationTargetException e) {
 				throw new RuntimeException("Unable to send team packet to player " + player.toString(), e);
 			}
-			return null;
 		});
 	}
 
 	@NotNull
 	private static CompletableFuture<Void> sendTeamPacketAsync(@NotNull Collection<? extends Entity> entities,
-															   @NotNull GlowAPI.Color color,
+															   @NotNull Color color,
 															   boolean addEntity,
 															   @NotNull NameTagVisibility nameTagVisibility,
 															   @NotNull TeamPush teamPush,
 															   @NotNull Player player) {
-		return CompletableFuture.supplyAsync(() -> {
+		return CompletableFuture.runAsync(() -> {
 			final PacketContainer packet = new PacketContainer(PacketType.Play.Server.SCOREBOARD_TEAM);
 			final WrapperPlayServerScoreboardTeam wrappedPacket = new WrapperPlayServerScoreboardTeam(packet);
 
 			Modes packetMode;
 			if (addEntity) packetMode = Modes.PLAYERS_ADDED;
 			else packetMode = Modes.PLAYERS_REMOVED;
+			wrappedPacket.setPacketMode(packetMode);
 
 			final String teamName = color.getTeamName();
-
-			wrappedPacket.setPacketMode(packetMode);
 			wrappedPacket.setName(teamName);
+
 			wrappedPacket.setNameTagVisibility(nameTagVisibility);
 			wrappedPacket.setTeamPush(teamPush);
 
@@ -564,21 +585,16 @@ public class GlowAPI extends JavaPlugin {
 			entities
 				.parallelStream()
 				.map(entity -> {
-					if (entity instanceof OfflinePlayer) {
-						//Players still use the name...
-						return entity.getName();
-					} else {
-						return entity.getUniqueId().toString();
-					}
+					if (entity instanceof OfflinePlayer) return entity.getName();
+					else return entity.getUniqueId().toString();
 				})
 				.forEach(entries::add);
 
 			try {
-				GlowAPI.getPlugin().getProtocolManager().sendServerPacket(player, packet);
+				getPlugin().getProtocolManager().sendServerPacket(player, packet);
 			} catch (InvocationTargetException e) {
 				throw new RuntimeException("Unable to send team packet to player " + player.toString(), e);
 			}
-			return null;
 		});
 	}
 
