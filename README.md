@@ -92,7 +92,7 @@ public class MyClass {
     <dependency>
         <groupId>com.github.metalshark</groupId>
         <artifactId>GlowAPI</artifactId>
-        <version>master-bfab7675d2-1</version>
+        <version>2.0.0</version>
     </dependency>
 </dependencies>
 ```
