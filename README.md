@@ -20,16 +20,25 @@ Version 1.4.7 is intended for 1.13+ only. For older MC versions, please use 1.4.
 
 ## Usage
 ```java
-@EventHandler
-public void onJoin(final PlayerJoinEvent event) {
-    //Delay the update by a few ticks until the player is actually on the server
-    Bukkit.getScheduler().runTaskLater(this, new Runnable() {
-        @Override
-        public void run() {
+import org.bukkit.Bukkit;
+import org.bukkit.event.player.PlayerJoinEvent;
+import org.inventivetalent.glow.GlowAPI;
+
+public class PlayerJoinListener implements Listener {
+
+    @EventHandler
+    public void onPlayerJoin(final PlayerJoinEvent event) {
+
+        //Delay the update by a few ticks until the player is actually on the server
+        Bukkit.getScheduler().runTaskLaterAsynchronously(this, () -> {
+
             //Set the event's player glowing in DARK_AQUA for all online players
             GlowAPI.setGlowing(event.getPlayer(), GlowAPI.Color.DARK_AQUA, Bukkit.getOnlinePlayers());
-        }
-    }, 10);
+            
+        }, 10);
+
+    }
+
 }
 ```
 ## Maven
@@ -40,7 +49,9 @@ public void onJoin(final PlayerJoinEvent event) {
         <url>https://jitpack.io</url>
     </repository>
 </repositories>
+```
 
+```xml
 <dependencies>
     <dependency>
         <groupId>com.github.metalshark</groupId>

@@ -4,6 +4,7 @@ import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.events.*;
 import com.comphenix.protocol.injector.GamePhase;
 import com.comphenix.protocol.wrappers.WrappedWatchableObject;
+import org.bukkit.World;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
@@ -31,9 +32,14 @@ public class EntityMetadataListener implements PacketListener {
         final List<WrappedWatchableObject> metaData = wrappedPacket.getMetadata();
         if (metaData == null || metaData.isEmpty()) return;//Nothing to modify
 
-        Player player = packetEvent.getPlayer();
-
-        final Entity entity = GlowAPI.getEntityById(player.getWorld(), entityId);
+        final Player player = packetEvent.getPlayer();
+        final World world = player.getWorld();
+        final Entity entity = world
+            .getEntities()
+            .parallelStream()
+            .filter(worldEntity -> worldEntity.getEntityId() == entityId)
+            .findAny()
+            .orElse(null);
         if (entity == null) return;
 
         //Check if the entity is glowing

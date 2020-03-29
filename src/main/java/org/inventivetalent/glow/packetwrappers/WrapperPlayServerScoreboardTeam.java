@@ -33,8 +33,8 @@ public class WrapperPlayServerScoreboardTeam extends AbstractPacket {
 
     public static final Class<?> EnumChatFormat = MinecraftReflection.getMinecraftClass("EnumChatFormat");
 
-    private static byte ALLOW_FRIENDLY_FIRE = 0x01;
-    private static byte CAN_SEE_FRIENDLY_INVISIBLES = 0x02;
+    private static final byte ALLOW_FRIENDLY_FIRE = 0x01;
+    private static final byte CAN_SEE_FRIENDLY_INVISIBLES = 0x02;
 
     /**
      * Enumeration of all the known packet modes.
@@ -49,7 +49,7 @@ public class WrapperPlayServerScoreboardTeam extends AbstractPacket {
         PLAYERS_ADDED(3),
         PLAYERS_REMOVED(4);
 
-        int packetMode;
+        final int packetMode;
 
         @Nullable
         public static Modes valueOf(int packetMode) {
@@ -71,7 +71,7 @@ public class WrapperPlayServerScoreboardTeam extends AbstractPacket {
         PUSH_OWN_TEAM("pushOwnTeam"),
         NEVER("never");
 
-        String collisionRule;
+        final String collisionRule;
 
         TeamPush(@NotNull String collisionRule) {
             this.collisionRule = collisionRule;
@@ -85,7 +85,7 @@ public class WrapperPlayServerScoreboardTeam extends AbstractPacket {
         HIDE_FOR_OWN_TEAM("hideForOwnTeam"),
         NEVER("never");
 
-        String nameTagVisibility;
+        final String nameTagVisibility;
 
         NameTagVisibility(@NotNull String nameTagVisibility) {
             this.nameTagVisibility = nameTagVisibility;
@@ -108,6 +108,7 @@ public class WrapperPlayServerScoreboardTeam extends AbstractPacket {
      * @return The current Team Name
     */
     @NotNull
+    @SuppressWarnings("unused")
     public String getName() {
         return handle.getStrings().read(0);
     }
@@ -218,7 +219,6 @@ public class WrapperPlayServerScoreboardTeam extends AbstractPacket {
      * A team must be created or updated.
      * @return The current Friendly fire
      */
-    @NotNull
     @SuppressWarnings("unused")
     public boolean getAllowFriendlyFire() {
         return ((handle.getIntegers().read(1).byteValue() & ALLOW_FRIENDLY_FIRE) != 0);
@@ -234,7 +234,7 @@ public class WrapperPlayServerScoreboardTeam extends AbstractPacket {
     public void setAllowFriendlyFire(boolean value) {
         int packOptionData = handle.getIntegers().read(1);
         packOptionData = value ? (packOptionData | ALLOW_FRIENDLY_FIRE) : (packOptionData & ~ALLOW_FRIENDLY_FIRE);
-        handle.getIntegers().write(1, (int) packOptionData);
+        handle.getIntegers().write(1, packOptionData);
     }
 
     /**
@@ -243,7 +243,6 @@ public class WrapperPlayServerScoreboardTeam extends AbstractPacket {
      * A team must be created or updated.
      * @return The current Friendly fire
      */
-    @NotNull
     @SuppressWarnings("unused")
     public boolean getCanSeeFriendlyInvisibles() {
         return ((handle.getIntegers().read(1).byteValue() & CAN_SEE_FRIENDLY_INVISIBLES) != 0);
@@ -259,7 +258,7 @@ public class WrapperPlayServerScoreboardTeam extends AbstractPacket {
     public void setCanSeeFriendlyInvisibles(boolean value) {
         int packOptionData = handle.getIntegers().read(1);
         packOptionData = value ? (packOptionData | CAN_SEE_FRIENDLY_INVISIBLES) : (packOptionData & ~CAN_SEE_FRIENDLY_INVISIBLES);
-        handle.getIntegers().write(1, (int) packOptionData);
+        handle.getIntegers().write(1, packOptionData);
     }
     
     /**

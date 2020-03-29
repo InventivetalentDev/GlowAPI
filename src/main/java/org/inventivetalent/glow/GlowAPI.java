@@ -15,7 +15,6 @@ import org.bstats.bukkit.MetricsLite;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.OfflinePlayer;
-import org.bukkit.World;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
@@ -41,6 +40,8 @@ import java.util.stream.Stream;
 
 public class GlowAPI extends JavaPlugin {
 	public static final byte ENTITY_GLOWING_EFFECT = (byte) 0x40;
+	private static final NameTagVisibility DEFAULT_NAME_TAG_VISIBILITY = NameTagVisibility.ALWAYS;
+	private static final TeamPush DEFAULT_TEAM_PUSH = TeamPush.ALWAYS;
 
 	private static final WrappedDataWatcher.Serializer byteSerializer = WrappedDataWatcher.Registry.get(Byte.class);
 
@@ -73,14 +74,14 @@ public class GlowAPI extends JavaPlugin {
 		GREEN(ChatColor.GREEN),
 		AQUA(ChatColor.AQUA),
 		RED(ChatColor.RED),
-		PURPLE(ChatColor.LIGHT_PURPLE), // Kept for backwards compatibility
+		@Deprecated PURPLE(ChatColor.LIGHT_PURPLE),
 		LIGHT_PURPLE(ChatColor.LIGHT_PURPLE),
 		YELLOW(ChatColor.YELLOW),
 		WHITE(ChatColor.WHITE),
 		NONE(ChatColor.RESET);
 
 		@Getter
-		ChatColor chatColor;
+		final ChatColor chatColor;
 
 		Color(@NotNull ChatColor chatColor) {
 			this.chatColor = chatColor;
@@ -125,59 +126,190 @@ public class GlowAPI extends JavaPlugin {
 		asynchronousManager.unregisterAsyncHandler(entityMetadataListenerHandler);
 	}
 
+	@SuppressWarnings("unused")
+	@Nullable public static GlowAPI.Color getGlowColor(@NotNull Entity entity,
+													   @NotNull Player player) {
+		final UUID entityUniqueId = entity.getUniqueId();
+		if (!dataMap.containsKey(entityUniqueId)) return null;
+		GlowData data = dataMap.get(entityUniqueId);
+		return data.colorMap.get(player.getUniqueId());
+	}
+
+	@SuppressWarnings("unused")
+	public static void initTeams(@NotNull Player player,
+								 @NotNull NameTagVisibility nameTagVisibility,
+								 @NotNull TeamPush teamPush) {
+		initTeamsAsync(player, nameTagVisibility, teamPush).join();
+	}
+
+
+	@SuppressWarnings("unused")
+	public static void initTeams(@NotNull Player player) {
+		initTeamsAsync(player).join();
+	}
+
+	@NotNull
+	public static CompletableFuture<Void> initTeamsAsync(@NotNull Player player) {
+		return initTeamsAsync(player, DEFAULT_NAME_TAG_VISIBILITY, DEFAULT_TEAM_PUSH);
+	}
+
+	@NotNull
+	public static CompletableFuture<Void> initTeamsAsync(@NotNull Player player,
+														 @NotNull NameTagVisibility nameTagVisibility,
+														 @NotNull TeamPush teamPush) {
+		return CompletableFuture.allOf(Arrays.stream(Color.values())
+			.parallel()
+			.map(color -> GlowAPI.sendTeamCreatedPacket(color, nameTagVisibility, teamPush, player))
+			.toArray(CompletableFuture[]::new));
+	}
+
+	@NotNull
+	public static CompletableFuture<Void> sendTeamCreatedPacket(@NotNull GlowAPI.Color color,
+																@NotNull NameTagVisibility nameTagVisibility,
+																@NotNull TeamPush teamPush, @NotNull Player player) {
+		return CompletableFuture.supplyAsync(() -> {
+			final PacketContainer packet = new PacketContainer(PacketType.Play.Server.SCOREBOARD_TEAM);
+			final WrapperPlayServerScoreboardTeam wrappedPacket = new WrapperPlayServerScoreboardTeam(packet);
+
+			final String teamName = color.getTeamName();
+
+			wrappedPacket.setPacketMode(Modes.TEAM_CREATED);
+			wrappedPacket.setName(teamName);
+			wrappedPacket.setNameTagVisibility(nameTagVisibility);
+			wrappedPacket.setTeamPush(teamPush);
+			wrappedPacket.setTeamColor(color.getChatColor());
+			wrappedPacket.setTeamPrefix(color.getChatColor().toString());
+			wrappedPacket.setTeamDisplayName(teamName);
+			wrappedPacket.setTeamSuffix("");
+			wrappedPacket.setAllowFriendlyFire(true);
+			wrappedPacket.setCanSeeFriendlyInvisibles(false);
+
+			try {
+				GlowAPI.getPlugin().getProtocolManager().sendServerPacket(player, packet);
+			} catch (InvocationTargetException e) {
+				throw new RuntimeException("Unable to send team packet to player " + player.toString(), e);
+			}
+			return null;
+		});
+	}
+
+	@SuppressWarnings("unused")
+	public static boolean isGlowing(@NotNull Entity entity,
+									@NotNull Player player) {
+		return getGlowColor(entity, player) != null;
+	}
+
+	@SuppressWarnings("unused")
+	public static boolean isGlowing(@NotNull Entity entity,
+									@NotNull Collection<? extends Player> players,
+									boolean checkAll) {
+		Stream<? extends Player> playersStream =  players.parallelStream();
+		if (checkAll) return playersStream.allMatch(player -> isGlowing(entity, player));
+		else return playersStream.anyMatch(player -> isGlowing(entity, player));
+	}
+
+	@SuppressWarnings("unused")
+	public static void setGlowing(@Nullable Entity entity,
+								  @Nullable GlowAPI.Color color,
+								  @NotNull NameTagVisibility tagVisibility,
+								  @NotNull TeamPush push,
+								  @NotNull Player player) {
+		final Collection<Entity> entities = Collections.singletonList(entity);
+		setGlowingAsync(entities, color, tagVisibility, push, player).join();
+	}
+
+	@SuppressWarnings("unused")
+	public static void setGlowing(@Nullable Entity entity,
+								  @Nullable GlowAPI.Color color,
+								  @NotNull Player player) {
+		setGlowingAsync(entity, color, player).join();
+	}
+
+	@SuppressWarnings("unused")
+	public static void setGlowing(@Nullable Entity entity,
+								  boolean glowing,
+								  @NotNull Player player) {
+		setGlowingAsync(entity, glowing, player).join();
+	}
+
+	@SuppressWarnings("unused")
+	public static void setGlowing(@Nullable Entity entity,
+								  boolean glowing,
+								  @NotNull Collection<? extends Player> players) {
+		setGlowingAsync(entity, glowing, players).join();
+	}
+
+	@SuppressWarnings("unused")
+	public static void setGlowing(@Nullable Entity entity,
+								  @Nullable GlowAPI.Color color,
+								  @NotNull Collection<? extends Player> players) {
+		setGlowingAsync(entity, color, players).join();
+	}
+
+	@SuppressWarnings("unused")
+	public static void setGlowing(@NotNull Collection<? extends Entity> entities,
+								  @Nullable GlowAPI.Color color,
+								  @NotNull Player player) {
+		setGlowingAsync(entities, color, player).join();
+	}
+
+	@SuppressWarnings("unused")
+	public static void setGlowing(@NotNull Collection<? extends Entity> entities,
+								  @Nullable GlowAPI.Color color,
+								  @NotNull Collection<? extends Player> players) {
+		setGlowingAsync(entities, color, players).join();
+	}
+
 	@NotNull
 	public static CompletableFuture<Void> setGlowingAsync(@Nullable Entity entity,
 														  @Nullable GlowAPI.Color color,
-											              @NotNull NameTagVisibility nameTagVisibility,
-											              @NotNull TeamPush teamPush,
-											              @NotNull Player player) {
-		return CompletableFuture.supplyAsync(() -> {
-			boolean glowing = color != null;
-			if (entity == null) glowing = false;
-			if (entity instanceof OfflinePlayer) {
-				if (!((OfflinePlayer) entity).isOnline()) glowing = false;
-			}
+														  @NotNull Player player) {
+		final Collection<Entity> entities = Collections.singletonList(entity);
+		return setGlowingAsync(entities, color, DEFAULT_NAME_TAG_VISIBILITY, DEFAULT_TEAM_PUSH, player);
+	}
 
-			final UUID entityUniqueId = (entity == null) ? null : entity.getUniqueId();
-			final Map<UUID, GlowData> dataMap = GlowAPI.getDataMap();
-			final boolean wasGlowing = dataMap.containsKey(entityUniqueId);
-			final GlowData glowData = (wasGlowing && entity != null) ? dataMap.get(entityUniqueId) : new GlowData();
-			final UUID playerUniqueId = player.getUniqueId();
-			final Color oldColor = wasGlowing ? glowData.colorMap.get(playerUniqueId) : null;
+	@NotNull
+	public static CompletableFuture<Void> setGlowingAsync(@Nullable Entity entity,
+														  boolean glowing,
+														  @NotNull Player player) {
+		return setGlowingAsync(entity, glowing ? GlowAPI.Color.NONE : null, player);
+	}
 
-			if (glowing) glowData.colorMap.put(playerUniqueId, color);
-			else glowData.colorMap.remove(playerUniqueId);
+	@NotNull
+	public static CompletableFuture<Void> setGlowingAsync(@Nullable Entity entity,
+														  boolean glowing,
+														  @NotNull Collection<? extends Player> players) {
+		return CompletableFuture.allOf(players
+			.parallelStream()
+			.map(player -> setGlowingAsync(entity, glowing, player))
+			.toArray(CompletableFuture[]::new));
+	}
 
-			if (glowData.colorMap.isEmpty()) dataMap.remove(entityUniqueId);
-			else if (entity != null) dataMap.put(entityUniqueId, glowData);
+	@NotNull
+	public static CompletableFuture<Void> setGlowingAsync(@Nullable Entity entity,
+														  @Nullable GlowAPI.Color color,
+														  @NotNull Collection<? extends Player> players) {
+		return CompletableFuture.allOf(players
+			.parallelStream()
+			.map(player -> setGlowingAsync(entity, color, player))
+			.toArray(CompletableFuture[]::new));
+	}
 
-			if (color != null && oldColor == color) return null;
-			if (entity == null) return null;
-			if (entity instanceof OfflinePlayer) {
-				if (!((OfflinePlayer) entity).isOnline()) return null;
-			}
-			if (!player.isOnline()) return null;
+	@NotNull
+	public static CompletableFuture<Void> setGlowingAsync(@NotNull Collection<? extends Entity> entities,
+														  @Nullable GlowAPI.Color color,
+														  @NotNull Player player) {
+		return setGlowingAsync(entities, color, DEFAULT_NAME_TAG_VISIBILITY, DEFAULT_TEAM_PUSH, player);
+	}
 
-			CompletableFuture<Void> future = GlowAPI.sendGlowPacketAsync(entity, glowing, player);
-
-			final boolean createNewTeam = false;
-			if (oldColor != null) {
-				//We never add to NONE, so no need to remove
-				if (oldColor != Color.NONE) {
-					final boolean addEntity = false;
-					//use the old color to remove the player from its team
-					future.thenRun(() -> GlowAPI.sendTeamPacketAsync(entity, oldColor, createNewTeam, addEntity, nameTagVisibility, teamPush, player).join());
-				}
-			}
-			if (glowing) {
-				final boolean addEntity = color != Color.NONE;
-				future.thenRun(() -> GlowAPI.sendTeamPacketAsync(entity, color, createNewTeam, addEntity, nameTagVisibility, teamPush, player).join());
-			}
-
-			future.join();
-
-			return null;
-		});
+	@NotNull
+	public static CompletableFuture<Void> setGlowingAsync(@NotNull Collection<? extends Entity> entities,
+														  @Nullable GlowAPI.Color color,
+														  @NotNull Collection<? extends Player> players) {
+		return CompletableFuture.allOf(players
+			.parallelStream()
+			.map(player -> setGlowingAsync(entities, color, player))
+			.toArray(CompletableFuture[]::new));
 	}
 
 	@NotNull
@@ -231,152 +363,35 @@ public class GlowAPI extends JavaPlugin {
 					}
 				}
 
+				if (glowing) {
+					addToTeam.add(entity);
+				}
+
 				return GlowAPI.sendGlowPacketAsync(entity, glowing, player);
 			})
 			.toArray(CompletableFuture[]::new));
 
-		removeFromTeam
-			.entrySet()
-			.parallelStream()
-			.forEach(entry -> {
-				future.thenRun(() -> GlowAPI.sendTeamPacketAsync(entry.getValue(), entry.getKey(), false, nameTagVisibility, teamPush, player).join());
-			});
+		future.thenRun(() -> {
+			removeFromTeam
+				.entrySet()
+				.parallelStream()
+				.forEach(entry -> future.thenRun(() -> {
+					final Collection<Entity> removeEntities = entry.getValue();
+					final Color removeColor = entry.getKey();
+					GlowAPI.sendTeamPacketAsync(removeEntities, removeColor, Modes.PLAYERS_REMOVED,
+							nameTagVisibility, teamPush, player).join();
+				}));
+		});
 
-		if (!addToTeam.isEmpty()) {
-			final boolean addEntity = color != Color.NONE;
-			future.thenRun(() -> GlowAPI.sendTeamPacketAsync(addToTeam, color, addEntity, nameTagVisibility, teamPush, player).join());
-		}
+		future.thenRun(() -> {
+			if (color != null && !addToTeam.isEmpty()) {
+				final Modes packetMode = (color != Color.NONE) ? Modes.PLAYERS_ADDED : Modes.PLAYERS_REMOVED;
+				future.thenRun(() -> GlowAPI.sendTeamPacketAsync(addToTeam, color, packetMode,
+						nameTagVisibility, teamPush, player).join());
+			}
+		});
 
 		return future;
-	}
-
-	@SuppressWarnings("unused")
-	public static void setGlowing(@Nullable Entity entity,
-								  @Nullable GlowAPI.Color color,
-								  @NotNull NameTagVisibility tagVisibility,
-								  @NotNull TeamPush push,
-								  @Nullable Player player) {
-		setGlowingAsync(entity, color, tagVisibility, push, player).join();
-	}
-
-	@NotNull
-	public static CompletableFuture<Void> setGlowingAsync(@Nullable Entity entity,
-							         	                  @Nullable GlowAPI.Color color,
-								                          @NotNull Player player) {
-		return setGlowingAsync(entity, color, NameTagVisibility.ALWAYS, TeamPush.ALWAYS, player);
-	}
-
-	@SuppressWarnings("unused")
-	public static void setGlowing(@Nullable Entity entity,
-								  @Nullable GlowAPI.Color color,
-								  @NotNull Player player) {
-		setGlowingAsync(entity, color, player).join();
-	}
-
-	@NotNull
-	public static CompletableFuture<Void> setGlowingAsync(@Nullable Entity entity,
-								                          boolean glowing,
-								                          @NotNull Player player) {
-		return setGlowingAsync(entity, glowing ? GlowAPI.Color.NONE : null, player);
-	}
-
-	@SuppressWarnings("unused")
-	public static void setGlowing(@Nullable Entity entity,
-								  boolean glowing,
-								  @NotNull Player player) {
-		setGlowingAsync(entity, glowing, player).join();
-	}
-
-	@NotNull
-	public static CompletableFuture<Void> setGlowingAsync(@Nullable Entity entity,
-							         		              boolean glowing,
-														  @NotNull Collection<? extends Player> players) {
-		return CompletableFuture.allOf(players
-				.parallelStream()
-				.map(player -> setGlowingAsync(entity, glowing, player))
-				.toArray(CompletableFuture[]::new));
-	}
-
-	@SuppressWarnings("unused")
-	public static void setGlowing(@Nullable Entity entity,
-								  boolean glowing,
-								  @NotNull Collection<? extends Player> players) {
-		setGlowingAsync(entity, glowing, players).join();
-	}
-
-	@NotNull
-	public static CompletableFuture<Void> setGlowingAsync(@Nullable Entity entity,
-											              @Nullable GlowAPI.Color color,
-											              @NotNull Collection<? extends Player> players) {
-		return CompletableFuture.allOf(players
-			.parallelStream()
-			.map(player -> setGlowingAsync(entity, color, player))
-			.toArray(CompletableFuture[]::new));
-	}
-
-	@SuppressWarnings("unused")
-	public static void setGlowing(@Nullable Entity entity,
-								  @Nullable GlowAPI.Color color,
-								  @NotNull Collection<? extends Player> players) {
-		setGlowingAsync(entity, color, players).join();
-	}
-
-	@NotNull
-	public static CompletableFuture<Void> setGlowingAsync(@NotNull Collection<? extends Entity> entities,
-														  @Nullable GlowAPI.Color color,
-								                          @NotNull Player player) {
-		return CompletableFuture.allOf(entities
-			.parallelStream()
-			.map(entity -> GlowAPI.setGlowingAsync(entity, color, player))
-			.toArray(CompletableFuture[]::new));
-	}
-
-	@SuppressWarnings("unused")
-	public static void setGlowing(@NotNull Collection<? extends Entity> entities,
-								  @Nullable GlowAPI.Color color,
-								  @NotNull Player player) {
-		setGlowingAsync(entities, color, player).join();
-	}
-
-	@NotNull
-	public static CompletableFuture<Void> setGlowingAsync(@NotNull Collection<? extends Entity> entities,
-							              	              @Nullable GlowAPI.Color color,
-								                          @NotNull Collection<? extends Player> players) {
-		return CompletableFuture.allOf(players
-				.parallelStream()
-				.map(player -> setGlowingAsync(entities, color, player))
-				.toArray(CompletableFuture[]::new));
-	}
-
-	@SuppressWarnings("unused")
-	public static void setGlowing(@NotNull Collection<? extends Entity> entities,
-								  @Nullable GlowAPI.Color color,
-								  @NotNull Collection<? extends Player> players) {
-		setGlowingAsync(entities, color, players).join();
-	}
-
-	@SuppressWarnings("unused")
-	public static boolean isGlowing(@NotNull Entity entity,
-									@NotNull Player player) {
-		return getGlowColor(entity, player) != null;
-	}
-
-	@SuppressWarnings("unused")
-	public static boolean isGlowing(@NotNull Entity entity,
-									@NotNull Collection<? extends Player> players,
-									boolean checkAll) {
-		Stream<? extends Player> playersStream =  players.parallelStream();
-		if (checkAll) return playersStream.allMatch(player -> isGlowing(entity, player));
-		else return playersStream.anyMatch(player -> isGlowing(entity, player));
-	}
-
-	@SuppressWarnings("unused")
-	@Nullable public static GlowAPI.Color getGlowColor(@NotNull Entity entity,
-													   @NotNull Player player) {
-		final UUID entityUniqueId = entity.getUniqueId();
-		if (!dataMap.containsKey(entityUniqueId)) return null;
-		GlowData data = dataMap.get(entityUniqueId);
-		return data.colorMap.get(player.getUniqueId());
 	}
 
 	@NotNull
@@ -414,101 +429,15 @@ public class GlowAPI extends JavaPlugin {
 	}
 
 	@NotNull
-	public static CompletableFuture<Void> initTeamsAsync(@NotNull Player player,
-										                 @NotNull NameTagVisibility nameTagVisibility,
-										                 @NotNull TeamPush teamPush) {
-		return CompletableFuture.allOf(Arrays.stream(Color.values())
-			.parallel()
-			.map(color -> GlowAPI.sendTeamPacketAsync(null, color, true, false, nameTagVisibility, teamPush, player))
-			.toArray(CompletableFuture[]::new));
-	}
-
-	@SuppressWarnings("unused")
-	public static void initTeams(@NotNull Player player,
-								 @NotNull NameTagVisibility nameTagVisibility,
-								 @NotNull TeamPush teamPush) {
-		initTeamsAsync(player, nameTagVisibility, teamPush).join();
-	}
-
-	@NotNull
-	public static CompletableFuture<Void> initTeamsAsync(@NotNull Player player) {
-		return initTeamsAsync(player, NameTagVisibility.ALWAYS, TeamPush.ALWAYS);
-	}
-
-
-	@SuppressWarnings("unused")
-	public static void initTeams(@NotNull Player player) {
-		initTeamsAsync(player).join();
-	}
-
-	@NotNull
-	public static CompletableFuture<Void> sendTeamPacketAsync(@Nullable Entity entity,
-												              @NotNull GlowAPI.Color color,
-												              boolean createNewTeam,
-												              boolean addEntity,
-												              @NotNull NameTagVisibility nameTagVisibility,
-												              @NotNull TeamPush teamPush,
-												              @NotNull Player player) {
-		return CompletableFuture.supplyAsync(() -> {
-			final PacketContainer packet = new PacketContainer(PacketType.Play.Server.SCOREBOARD_TEAM);
-			final WrapperPlayServerScoreboardTeam wrappedPacket = new WrapperPlayServerScoreboardTeam(packet);
-
-			Modes packetMode;
-			if (createNewTeam) packetMode = Modes.TEAM_CREATED;
-			else if (addEntity) packetMode = Modes.PLAYERS_ADDED;
-			else packetMode = Modes.PLAYERS_REMOVED;
-
-			final String teamName = color.getTeamName();
-
-			wrappedPacket.setPacketMode(packetMode);
-			wrappedPacket.setName(teamName);
-			wrappedPacket.setNameTagVisibility(nameTagVisibility);
-			wrappedPacket.setTeamPush(teamPush);
-
-			if (createNewTeam) {
-				wrappedPacket.setTeamColor(color.getChatColor());
-				wrappedPacket.setTeamPrefix(color.getChatColor().toString());
-				wrappedPacket.setTeamDisplayName(teamName);
-				wrappedPacket.setTeamSuffix("");
-				wrappedPacket.setAllowFriendlyFire(true);
-				wrappedPacket.setCanSeeFriendlyInvisibles(false);
-			} else {
-				if (entity == null) return null;
-				//Add/remove entries
-				String entry;
-				if (entity instanceof OfflinePlayer) {
-					//Players still use the name...
-					entry = entity.getName();
-				} else {
-					entry = entity.getUniqueId().toString();
-				}
-				Collection<String> entries = wrappedPacket.getEntries();
-				entries.add(entry);
-			}
-
-			try {
-				GlowAPI.getPlugin().getProtocolManager().sendServerPacket(player, packet);
-			} catch (InvocationTargetException e) {
-				throw new RuntimeException("Unable to send team packet to player " + player.toString(), e);
-			}
-			return null;
-		});
-	}
-
-	@NotNull
 	public static CompletableFuture<Void> sendTeamPacketAsync(@NotNull Collection<? extends Entity> entities,
 															  @NotNull GlowAPI.Color color,
-															  boolean addEntity,
+															  @NotNull Modes packetMode,
 															  @NotNull NameTagVisibility nameTagVisibility,
 															  @NotNull TeamPush teamPush,
 															  @NotNull Player player) {
 		return CompletableFuture.supplyAsync(() -> {
 			final PacketContainer packet = new PacketContainer(PacketType.Play.Server.SCOREBOARD_TEAM);
 			final WrapperPlayServerScoreboardTeam wrappedPacket = new WrapperPlayServerScoreboardTeam(packet);
-
-			Modes packetMode;
-			if (addEntity) packetMode = Modes.PLAYERS_ADDED;
-			else packetMode = Modes.PLAYERS_REMOVED;
 
 			final String teamName = color.getTeamName();
 
@@ -537,24 +466,6 @@ public class GlowAPI extends JavaPlugin {
 			}
 			return null;
 		});
-	}
-
-	@NotNull
-	public static CompletableFuture<Entity> getEntityByIdAsync(@NotNull World world,
-															   int entityId) {
-		return CompletableFuture.supplyAsync(() -> world
-			.getEntities()
-			.parallelStream()
-			.filter(entity -> entity.getEntityId() == entityId)
-			.findAny()
-			.orElse(null));
-	}
-
-	@Nullable
-	@SuppressWarnings("unused")
-	public static Entity getEntityById(@NotNull World world,
-									   int entityId) {
-		return getEntityByIdAsync(world, entityId).join();
 	}
 
 }
