@@ -8,6 +8,8 @@ import com.comphenix.protocol.async.AsyncListenerHandler;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.events.PacketListener;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher;
+import com.comphenix.protocol.wrappers.WrappedDataWatcher.Registry;
+import com.comphenix.protocol.wrappers.WrappedDataWatcher.Serializer;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher.WrappedDataWatcherObject;
 import com.comphenix.protocol.wrappers.WrappedWatchableObject;
 import lombok.Getter;
@@ -34,16 +36,22 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.lang.reflect.InvocationTargetException;
-import java.util.*;
-import java.util.concurrent.*;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Stream;
 
 public class GlowAPI extends JavaPlugin {
 	public static final byte ENTITY_GLOWING_EFFECT = (byte) 0x40;
 	private static final NameTagVisibility DEFAULT_NAME_TAG_VISIBILITY = NameTagVisibility.ALWAYS;
 	private static final TeamPush DEFAULT_TEAM_PUSH = TeamPush.ALWAYS;
-
-	private static final WrappedDataWatcher.Serializer byteSerializer = WrappedDataWatcher.Registry.get(Byte.class);
+	private static final Serializer BYTE_SERIALIZER = Registry.get(Byte.class);
 
 	@Getter
 	private static final Map<UUID, GlowData> dataMap = new ConcurrentHashMap<>();
@@ -89,11 +97,16 @@ public class GlowAPI extends JavaPlugin {
 
 		@NotNull
 		public String getTeamName() {
-			String name = String.format("GAPI#%s", name());
+			String name = "GAPI#" + name();
 			if (name.length() > 16) {
 				name = name.substring(0, 16);
 			}
 			return name;
+		}
+
+		@NotNull
+		public static Stream<Color> getValues() {
+			return Arrays.stream(Color.values());
 		}
 	}
 
@@ -314,11 +327,11 @@ public class GlowAPI extends JavaPlugin {
 
 	@NotNull
 	public static CompletableFuture<Void> setGlowingAsync(@NotNull Collection<? extends Entity> entities,
-														  @Nullable GlowAPI.Color color,
+														  @Nullable Color color,
 														  @NotNull NameTagVisibility nameTagVisibility,
 														  @NotNull TeamPush teamPush,
 														  @NotNull Player player) {
-		Map<GlowAPI.Color, Collection<Entity>> removeFromTeam = new ConcurrentHashMap<>();
+		Map<Color, Collection<Entity>> removeFromTeam = new ConcurrentHashMap<>();
 		Collection<Entity> addToTeam = ConcurrentHashMap.newKeySet();
 
 		CompletableFuture<Void> future = CompletableFuture.allOf(entities
@@ -330,11 +343,18 @@ public class GlowAPI extends JavaPlugin {
 					if (!((OfflinePlayer) entity).isOnline()) glowing = false;
 				}
 
-				final UUID entityUniqueId = (entity == null) ? null : entity.getUniqueId();
+				UUID entityUniqueId = null;
+				if (entity != null) entityUniqueId = entity.getUniqueId();
+
 				final Map<UUID, GlowData> dataMap = GlowAPI.getDataMap();
 				final boolean wasGlowing = dataMap.containsKey(entityUniqueId);
-				final GlowData glowData = (wasGlowing && entity != null) ? dataMap.get(entityUniqueId) : new GlowData();
+
+				GlowData glowData;
+				if (wasGlowing && entity != null) glowData = dataMap.get(entityUniqueId);
+				else glowData = new GlowData();
+
 				final UUID playerUniqueId = player.getUniqueId();
+
 				final Color oldColor = wasGlowing ? glowData.colorMap.get(playerUniqueId) : null;
 
 				if (glowing) glowData.colorMap.put(playerUniqueId, color);
@@ -369,6 +389,7 @@ public class GlowAPI extends JavaPlugin {
 
 				return GlowAPI.sendGlowPacketAsync(entity, glowing, player);
 			})
+			.filter(Objects::nonNull)
 			.toArray(CompletableFuture[]::new));
 
 		future.thenRun(() -> {
@@ -396,12 +417,12 @@ public class GlowAPI extends JavaPlugin {
 
 	@NotNull
 	private static CompletableFuture<Void> sendGlowPacketAsync(@NotNull Entity entity,
-												              boolean glowing,
-												              @NotNull Player player) {
-		return CompletableFuture.supplyAsync(() -> {
+												               boolean glowing,
+												               @NotNull Player player) {
+		return CompletableFuture.runAsync(() -> {
 			final PacketContainer packet = new PacketContainer(PacketType.Play.Server.ENTITY_METADATA);
 			final WrapperPlayServerEntityMetadata wrappedPacket = new WrapperPlayServerEntityMetadata(packet);
-			final WrappedDataWatcherObject dataWatcherObject = new WrappedDataWatcherObject(0, byteSerializer);
+			final WrappedDataWatcherObject dataWatcherObject = new WrappedDataWatcherObject(0, BYTE_SERIALIZER);
 
 			final int invertedEntityId = -entity.getEntityId();
 
@@ -420,11 +441,10 @@ public class GlowAPI extends JavaPlugin {
 			wrappedPacket.setMetadata(metadata);
 
 			try {
-				GlowAPI.getPlugin().getProtocolManager().sendServerPacket(player, packet);
+				getPlugin().getProtocolManager().sendServerPacket(player, packet);
 			} catch (InvocationTargetException e) {
 				throw new RuntimeException("Unable to send entity metadata packet to player " + player.toString(), e);
 			}
-			return null;
 		});
 	}
 
@@ -435,14 +455,13 @@ public class GlowAPI extends JavaPlugin {
 															  @NotNull NameTagVisibility nameTagVisibility,
 															  @NotNull TeamPush teamPush,
 															  @NotNull Player player) {
-		return CompletableFuture.supplyAsync(() -> {
+		return CompletableFuture.runAsync(() -> {
 			final PacketContainer packet = new PacketContainer(PacketType.Play.Server.SCOREBOARD_TEAM);
 			final WrapperPlayServerScoreboardTeam wrappedPacket = new WrapperPlayServerScoreboardTeam(packet);
 
 			final String teamName = color.getTeamName();
-
-			wrappedPacket.setPacketMode(packetMode);
 			wrappedPacket.setName(teamName);
+
 			wrappedPacket.setNameTagVisibility(nameTagVisibility);
 			wrappedPacket.setTeamPush(teamPush);
 
@@ -450,21 +469,16 @@ public class GlowAPI extends JavaPlugin {
 			entities
 				.parallelStream()
 				.map(entity -> {
-					if (entity instanceof OfflinePlayer) {
-						//Players still use the name...
-						return entity.getName();
-					} else {
-						return entity.getUniqueId().toString();
-					}
+					if (entity instanceof OfflinePlayer) return entity.getName();
+					else return entity.getUniqueId().toString();
 				})
 				.forEach(entries::add);
 
 			try {
-				GlowAPI.getPlugin().getProtocolManager().sendServerPacket(player, packet);
+				getPlugin().getProtocolManager().sendServerPacket(player, packet);
 			} catch (InvocationTargetException e) {
 				throw new RuntimeException("Unable to send team packet to player " + player.toString(), e);
 			}
-			return null;
 		});
 	}
 

@@ -24,6 +24,7 @@ import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.utility.MinecraftReflection;
 import com.comphenix.protocol.wrappers.WrappedChatComponent;
+import com.comphenix.protocol.wrappers.WrappedDataWatcher;
 import org.bukkit.ChatColor;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -210,7 +211,8 @@ public class WrapperPlayServerScoreboardTeam extends AbstractPacket {
      */
     @SuppressWarnings("unused")
     public void setTeamSuffix(@NotNull String value) {
-        handle.getChatComponents().write(2, WrappedChatComponent.fromText(value));
+        final WrappedChatComponent wrappedChatComponent = WrappedChatComponent.fromText(value);
+        handle.getChatComponents().write(2, wrappedChatComponent);
     }
 
     /**
@@ -221,7 +223,9 @@ public class WrapperPlayServerScoreboardTeam extends AbstractPacket {
      */
     @SuppressWarnings("unused")
     public boolean getAllowFriendlyFire() {
-        return ((handle.getIntegers().read(1).byteValue() & ALLOW_FRIENDLY_FIRE) != 0);
+        final byte packOptionData = handle.getIntegers().read(1).byteValue();
+        final int allowFriendlyFire = packOptionData & ALLOW_FRIENDLY_FIRE;
+        return allowFriendlyFire != 0;
     }
 
     /**
@@ -233,7 +237,8 @@ public class WrapperPlayServerScoreboardTeam extends AbstractPacket {
     @SuppressWarnings("unused")
     public void setAllowFriendlyFire(boolean value) {
         int packOptionData = handle.getIntegers().read(1);
-        packOptionData = value ? (packOptionData | ALLOW_FRIENDLY_FIRE) : (packOptionData & ~ALLOW_FRIENDLY_FIRE);
+        if (value) packOptionData = packOptionData | ALLOW_FRIENDLY_FIRE;
+        else packOptionData = packOptionData & ~ALLOW_FRIENDLY_FIRE;
         handle.getIntegers().write(1, packOptionData);
     }
 
@@ -245,7 +250,9 @@ public class WrapperPlayServerScoreboardTeam extends AbstractPacket {
      */
     @SuppressWarnings("unused")
     public boolean getCanSeeFriendlyInvisibles() {
-        return ((handle.getIntegers().read(1).byteValue() & CAN_SEE_FRIENDLY_INVISIBLES) != 0);
+        final byte packOptionData = handle.getIntegers().read(1).byteValue();
+        final int canSeeFriendlyInvisibles = packOptionData & CAN_SEE_FRIENDLY_INVISIBLES;
+        return canSeeFriendlyInvisibles != 0;
     }
 
     /**
@@ -257,7 +264,8 @@ public class WrapperPlayServerScoreboardTeam extends AbstractPacket {
     @SuppressWarnings("unused")
     public void setCanSeeFriendlyInvisibles(boolean value) {
         int packOptionData = handle.getIntegers().read(1);
-        packOptionData = value ? (packOptionData | CAN_SEE_FRIENDLY_INVISIBLES) : (packOptionData & ~CAN_SEE_FRIENDLY_INVISIBLES);
+        if (value) packOptionData = packOptionData | CAN_SEE_FRIENDLY_INVISIBLES;
+        else packOptionData = packOptionData & ~CAN_SEE_FRIENDLY_INVISIBLES;
         handle.getIntegers().write(1, packOptionData);
     }
     
