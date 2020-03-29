@@ -41,6 +41,42 @@ public class PlayerJoinListener implements Listener {
 
 }
 ```
+
+```java
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.Player;
+import org.inventivetalent.glow.GlowAPI;
+
+public class MyClass {
+
+    public static void myMethod(Entity entity, Player player) {
+        if (GlowAPI.isGlowing(entity, player)) {
+            System.out.println("The entity is glowing for the player.");
+        }
+    }
+
+}
+```
+
+```java
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.Player;
+import org.inventivetalent.glow.GlowAPI;
+
+public class MyClass {
+
+    public static void myMethod(Collection<Entity> entities, Collection<Player> players) {
+        if (GlowAPI.isGlowing(entity, player)) {
+            CompleteableFuture<Void> future = GlowAPI.setGlowingAsync(event.getPlayer(), GlowAPI.Color.DARK_AQUA, Bukkit.getOnlinePlayers());
+
+            // Do some other work while that executes in the background
+
+            future.join(); //Wait for glowing to be set
+        }
+    }
+
+}
+```
 ## Maven
 ```xml
 <repositories>

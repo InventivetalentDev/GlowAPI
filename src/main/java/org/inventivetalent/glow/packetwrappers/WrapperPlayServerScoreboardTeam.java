@@ -24,7 +24,6 @@ import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.utility.MinecraftReflection;
 import com.comphenix.protocol.wrappers.WrappedChatComponent;
-import com.comphenix.protocol.wrappers.WrappedDataWatcher;
 import org.bukkit.ChatColor;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -295,11 +294,11 @@ public class WrapperPlayServerScoreboardTeam extends AbstractPacket {
      *  <li>{@link Modes#PLAYERS_ADDED}</li>
      *  <li>{@link Modes#PLAYERS_REMOVED}</li>
      * </ul>
-     * @param players - A list of entries.
+     * @param entries - A list of entries.
     */
     @SuppressWarnings("unused")
-    public void setEntries(@NotNull Collection<String> players) {
-    	handle.getSpecificModifier(Collection.class).write(0, players);
+    public void setEntries(@NotNull Collection<String> entries) {
+    	handle.getSpecificModifier(Collection.class).write(0, entries);
     }
 
     /**

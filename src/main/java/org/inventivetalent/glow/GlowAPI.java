@@ -180,7 +180,7 @@ public class GlowAPI extends JavaPlugin {
 	public static CompletableFuture<Void> sendTeamCreatedPacket(@NotNull GlowAPI.Color color,
 																@NotNull NameTagVisibility nameTagVisibility,
 																@NotNull TeamPush teamPush, @NotNull Player player) {
-		return CompletableFuture.supplyAsync(() -> {
+		return CompletableFuture.runAsync(() -> {
 			final PacketContainer packet = new PacketContainer(PacketType.Play.Server.SCOREBOARD_TEAM);
 			final WrapperPlayServerScoreboardTeam wrappedPacket = new WrapperPlayServerScoreboardTeam(packet);
 
@@ -202,7 +202,6 @@ public class GlowAPI extends JavaPlugin {
 			} catch (InvocationTargetException e) {
 				throw new RuntimeException("Unable to send team packet to player " + player.toString(), e);
 			}
-			return null;
 		});
 	}
 
@@ -224,11 +223,10 @@ public class GlowAPI extends JavaPlugin {
 	@SuppressWarnings("unused")
 	public static void setGlowing(@Nullable Entity entity,
 								  @Nullable GlowAPI.Color color,
-								  @NotNull NameTagVisibility tagVisibility,
+								  @NotNull NameTagVisibility nameTagVisibility,
 								  @NotNull TeamPush push,
 								  @NotNull Player player) {
-		final Collection<Entity> entities = Collections.singletonList(entity);
-		setGlowingAsync(entities, color, tagVisibility, push, player).join();
+		setGlowingAsync(entity, color, nameTagVisibility, push, player).join();
 	}
 
 	@SuppressWarnings("unused")
@@ -271,6 +269,16 @@ public class GlowAPI extends JavaPlugin {
 								  @Nullable GlowAPI.Color color,
 								  @NotNull Collection<? extends Player> players) {
 		setGlowingAsync(entities, color, players).join();
+	}
+
+	@NotNull
+	public static CompletableFuture<Void> setGlowingAsync(@Nullable Entity entity,
+														  @Nullable GlowAPI.Color color,
+														  @NotNull NameTagVisibility nameTagVisibility,
+														  @NotNull TeamPush push,
+														  @NotNull Player player) {
+		final Collection<Entity> entities = Collections.singletonList(entity);
+		return setGlowingAsync(entities, color, nameTagVisibility, push, player);
 	}
 
 	@NotNull
@@ -392,23 +400,21 @@ public class GlowAPI extends JavaPlugin {
 			.filter(Objects::nonNull)
 			.toArray(CompletableFuture[]::new));
 
-		future.thenRun(() -> {
-			removeFromTeam
-				.entrySet()
-				.parallelStream()
-				.forEach(entry -> future.thenRun(() -> {
-					final Collection<Entity> removeEntities = entry.getValue();
-					final Color removeColor = entry.getKey();
-					GlowAPI.sendTeamPacketAsync(removeEntities, removeColor, Modes.PLAYERS_REMOVED,
-							nameTagVisibility, teamPush, player).join();
-				}));
-		});
+		future.thenRun(() -> removeFromTeam
+			.entrySet()
+			.parallelStream()
+			.forEach(entry -> future.thenRun(() -> {
+				final Collection<Entity> removeEntities = entry.getValue();
+				final Color removeColor = entry.getKey();
+				GlowAPI.sendTeamPacketAsync(removeEntities, removeColor, Modes.PLAYERS_REMOVED,
+											nameTagVisibility, teamPush, player).join();
+			})));
 
 		future.thenRun(() -> {
 			if (color != null && !addToTeam.isEmpty()) {
 				final Modes packetMode = (color != Color.NONE) ? Modes.PLAYERS_ADDED : Modes.PLAYERS_REMOVED;
 				future.thenRun(() -> GlowAPI.sendTeamPacketAsync(addToTeam, color, packetMode,
-						nameTagVisibility, teamPush, player).join());
+																 nameTagVisibility, teamPush, player).join());
 			}
 		});
 
@@ -458,12 +464,12 @@ public class GlowAPI extends JavaPlugin {
 		return CompletableFuture.runAsync(() -> {
 			final PacketContainer packet = new PacketContainer(PacketType.Play.Server.SCOREBOARD_TEAM);
 			final WrapperPlayServerScoreboardTeam wrappedPacket = new WrapperPlayServerScoreboardTeam(packet);
+			wrappedPacket.setNameTagVisibility(nameTagVisibility);
+			wrappedPacket.setPacketMode(packetMode);
+			wrappedPacket.setTeamPush(teamPush);
 
 			final String teamName = color.getTeamName();
 			wrappedPacket.setName(teamName);
-
-			wrappedPacket.setNameTagVisibility(nameTagVisibility);
-			wrappedPacket.setTeamPush(teamPush);
 
 			Collection<String> entries = wrappedPacket.getEntries();
 			entities

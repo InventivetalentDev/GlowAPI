@@ -15,7 +15,6 @@ import org.bukkit.plugin.Plugin;
 import org.inventivetalent.glow.GlowAPI;
 import org.inventivetalent.glow.packetwrappers.WrapperPlayServerEntityMetadata;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
@@ -86,17 +85,6 @@ public class EntityMetadataListener implements PacketListener {
     @NotNull
     public Plugin getPlugin() {
         return GlowAPI.getPlugin();
-    }
-
-    @Nullable
-    private static Entity getEntityById(@NotNull World world,
-                                        int entityId) {
-        return world
-            .getEntities()
-            .parallelStream()
-            .filter(entity -> entity.getEntityId() == entityId)
-            .findAny()
-            .orElse(null);
     }
 
 }
