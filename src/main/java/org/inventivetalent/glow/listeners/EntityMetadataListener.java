@@ -1,14 +1,19 @@
 package org.inventivetalent.glow.listeners;
 
 import com.comphenix.protocol.PacketType;
-import com.comphenix.protocol.events.*;
+import com.comphenix.protocol.events.ListenerPriority;
+import com.comphenix.protocol.events.ListeningWhitelist;
+import com.comphenix.protocol.events.PacketContainer;
+import com.comphenix.protocol.events.PacketEvent;
+import com.comphenix.protocol.events.PacketListener;
 import com.comphenix.protocol.injector.GamePhase;
 import com.comphenix.protocol.wrappers.WrappedWatchableObject;
+import org.bukkit.World;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.inventivetalent.glow.GlowAPI;
-import org.inventivetalent.glow.packetwrapper.WrapperPlayServerEntityMetadata;
+import org.inventivetalent.glow.packetwrappers.WrapperPlayServerEntityMetadata;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
@@ -31,9 +36,14 @@ public class EntityMetadataListener implements PacketListener {
         final List<WrappedWatchableObject> metaData = wrappedPacket.getMetadata();
         if (metaData == null || metaData.isEmpty()) return;//Nothing to modify
 
-        Player player = packetEvent.getPlayer();
-
-        final Entity entity = GlowAPI.getEntityById(player.getWorld(), entityId);
+        final Player player = packetEvent.getPlayer();
+        final World world = player.getWorld();
+        final Entity entity = world
+            .getEntities()
+            .parallelStream()
+            .filter(worldEntity -> worldEntity.getEntityId() == entityId)
+            .findAny()
+            .orElse(null);
         if (entity == null) return;
 
         //Check if the entity is glowing
@@ -44,7 +54,6 @@ public class EntityMetadataListener implements PacketListener {
         final Object entityObj = wrappedEntityObj.getValue();
         if (!(entityObj instanceof Byte)) return;
         byte entityByte = (byte) entityObj;
-        /*Maybe use the isGlowing result*/
         entityByte = (byte) (entityByte | GlowAPI.ENTITY_GLOWING_EFFECT);
         wrappedEntityObj.setValue(entityByte);
     }

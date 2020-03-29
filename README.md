@@ -20,16 +20,61 @@ Version 1.4.7 is intended for 1.13+ only. For older MC versions, please use 1.4.
 
 ## Usage
 ```java
-@EventHandler
-public void onJoin(final PlayerJoinEvent event) {
-    //Delay the update by a few ticks until the player is actually on the server
-    Bukkit.getScheduler().runTaskLater(this, new Runnable() {
-        @Override
-        public void run() {
+import org.bukkit.Bukkit;
+import org.bukkit.event.player.PlayerJoinEvent;
+import org.inventivetalent.glow.GlowAPI;
+
+public class PlayerJoinListener implements Listener {
+
+    @EventHandler
+    public void onPlayerJoin(final PlayerJoinEvent event) {
+
+        //Delay the update by a few ticks until the player is actually on the server
+        Bukkit.getScheduler().runTaskLaterAsynchronously(this, () -> {
+
             //Set the event's player glowing in DARK_AQUA for all online players
             GlowAPI.setGlowing(event.getPlayer(), GlowAPI.Color.DARK_AQUA, Bukkit.getOnlinePlayers());
+            
+        }, 10);
+
+    }
+
+}
+```
+
+```java
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.Player;
+import org.inventivetalent.glow.GlowAPI;
+
+public class MyClass {
+
+    public static void myMethod(Entity entity, Player player) {
+        if (GlowAPI.isGlowing(entity, player)) {
+            System.out.println("The entity is glowing for the player.");
         }
-    }, 10);
+    }
+
+}
+```
+
+```java
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.Player;
+import org.inventivetalent.glow.GlowAPI;
+
+public class MyClass {
+
+    public static void myMethod(Collection<Entity> entities, Collection<Player> players) {
+        if (GlowAPI.isGlowing(entity, player)) {
+            CompleteableFuture<Void> future = GlowAPI.setGlowingAsync(event.getPlayer(), GlowAPI.Color.DARK_AQUA, Bukkit.getOnlinePlayers());
+
+            // Do some other work while that executes in the background
+
+            future.join(); //Wait for glowing to be set
+        }
+    }
+
 }
 ```
 ## Maven
@@ -40,7 +85,9 @@ public void onJoin(final PlayerJoinEvent event) {
         <url>https://jitpack.io</url>
     </repository>
 </repositories>
+```
 
+```xml
 <dependencies>
     <dependency>
         <groupId>com.github.metalshark</groupId>
