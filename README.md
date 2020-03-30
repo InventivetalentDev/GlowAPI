@@ -6,7 +6,7 @@
 
 This API allows you to change the glow-color of entities and players.
 
-- [SpigotMC Page](https://www.spigotmc.org/resources/api-glowapi.19422/)
+- [SpigotMC Page](https://www.spigotmc.org/resources/api-glowapi-async.76644/)
 - [Website](https://inventivetalent.org/)
 - [Donate](https://donation.inventivetalent.org/plugin/GlowAPI)
 
