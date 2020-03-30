@@ -143,8 +143,8 @@ public class GlowAPI extends JavaPlugin {
 	@Nullable public static GlowAPI.Color getGlowColor(@NotNull Entity entity,
 													   @NotNull Player player) {
 		final UUID entityUniqueId = entity.getUniqueId();
-		if (!dataMap.containsKey(entityUniqueId)) return null;
-		GlowData data = dataMap.get(entityUniqueId);
+		final GlowData data = dataMap.get(entityUniqueId);
+		if (data == null) return null;
 		return data.colorMap.get(player.getUniqueId());
 	}
 
@@ -354,7 +354,6 @@ public class GlowAPI extends JavaPlugin {
 				UUID entityUniqueId = null;
 				if (entity != null) entityUniqueId = entity.getUniqueId();
 
-				final Map<UUID, GlowData> dataMap = GlowAPI.getDataMap();
 				final boolean wasGlowing = dataMap.containsKey(entityUniqueId);
 
 				GlowData glowData;
