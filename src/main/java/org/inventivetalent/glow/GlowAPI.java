@@ -19,6 +19,7 @@ import org.bukkit.ChatColor;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
+import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
@@ -56,8 +57,10 @@ public class GlowAPI extends JavaPlugin {
 	@Getter
 	private static final Map<UUID, GlowData> dataMap = new ConcurrentHashMap<>();
 
-	private Listener playerJoinListener;
-	private Listener playerQuitListener;
+	private static final Listener playerJoinListener = new PlayerJoinListener();
+	private static final Listener playerQuitListener = new PlayerQuitListener();
+
+	private static final PacketListener entityMetadataListener = new EntityMetadataListener();
 
 	@Getter
 	private ProtocolManager protocolManager;
@@ -117,8 +120,6 @@ public class GlowAPI extends JavaPlugin {
 	public void onEnable() {
 		new MetricsLite(this, 2190);
 
-		playerJoinListener = new PlayerJoinListener();
-		playerQuitListener = new PlayerQuitListener();
 		final PluginManager pluginManager = Bukkit.getPluginManager();
 		pluginManager.registerEvents(playerJoinListener, this);
 		pluginManager.registerEvents(playerQuitListener, this);
@@ -126,17 +127,17 @@ public class GlowAPI extends JavaPlugin {
 		protocolManager = ProtocolLibrary.getProtocolManager();
 		asynchronousManager = protocolManager.getAsynchronousManager();
 
-		final PacketListener entityMetadataListener = new EntityMetadataListener();
 		entityMetadataListenerHandler = asynchronousManager.registerAsyncHandler(entityMetadataListener);
 		entityMetadataListenerHandler.syncStart();
 	}
 
 	@Override
 	public void onDisable() {
-		PlayerJoinEvent.getHandlerList().unregister(playerJoinListener);
-		PlayerQuitEvent.getHandlerList().unregister(playerQuitListener);
+		HandlerList.unregisterAll(playerJoinListener);
+		HandlerList.unregisterAll(playerQuitListener);
 
 		asynchronousManager.unregisterAsyncHandler(entityMetadataListenerHandler);
+		entityMetadataListenerHandler.stop();
 	}
 
 	@SuppressWarnings("unused")
