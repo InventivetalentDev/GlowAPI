@@ -30,7 +30,7 @@ public class PlayerJoinListener implements Listener {
     public void onPlayerJoin(final PlayerJoinEvent event) {
 
         //Delay the update by a few ticks until the player is actually on the server
-        Bukkit.getScheduler().runTaskLaterAsynchronously(this, () -> {
+        Bukkit.getScheduler().runTaskLater(this, () -> {
 
             //Set the event's player glowing in DARK_AQUA for all online players
             GlowAPI.setGlowing(event.getPlayer(), GlowAPI.Color.DARK_AQUA, Bukkit.getOnlinePlayers());
