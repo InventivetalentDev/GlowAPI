@@ -66,13 +66,11 @@ import org.inventivetalent.glow.GlowAPI;
 public class MyClass {
 
     public static void myMethod(Collection<Entity> entities, Collection<Player> players) {
-        if (GlowAPI.isGlowing(entity, player)) {
-            CompleteableFuture<Void> future = GlowAPI.setGlowingAsync(event.getPlayer(), GlowAPI.Color.DARK_AQUA, Bukkit.getOnlinePlayers());
+        CompleteableFuture<Void> future = GlowAPI.setGlowingAsync(entities, GlowAPI.Color.DARK_AQUA, players);
 
-            // Do some other work while that executes in the background
+        // Do some other work while that executes in the background
 
-            future.join(); //Wait for glowing to be set
-        }
+        future.join(); //Wait for glowing to be set
     }
 
 }
