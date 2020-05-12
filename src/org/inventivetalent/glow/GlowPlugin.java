@@ -18,10 +18,10 @@ public class GlowPlugin extends JavaPlugin {
 
 	@Override
 	public void onEnable() {
-		new MetricsLite(this);
-
-		//Initialize this API of the plugin got loaded
+		//Initialize this API if the plugin got loaded
 		APIManager.initAPI(GlowAPI.class);
+
+		new MetricsLite(this, 2190);
 	}
 
 }
