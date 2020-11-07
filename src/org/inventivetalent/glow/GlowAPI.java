@@ -579,10 +579,12 @@ public class GlowAPI implements API, Listener {
 			}
 
 			Object entity;
-			if (Minecraft.VERSION.olderThan(Minecraft.Version.v1_14_R1)) {// < 1.14 uses IntHashMap
-				if (IntHashMapMethodResolver == null) {
-					IntHashMapMethodResolver = new MethodResolver(nmsClassResolver.resolve("IntHashMap"));
-				}
+      // Make sure the version is between 1.7 and 1.14. If the version is UNKNOWN because of a new not yet added version it  will have version -1 which will
+      // result in this clause being true and throw an error
+      if (Minecraft.VERSION.newerThan(Minecraft.Version.v1_7_R1) && Minecraft.VERSION.olderThan(Minecraft.Version.v1_14_R1)) {// < 1.14 uses IntHashMap
+        if (IntHashMapMethodResolver == null) {
+          IntHashMapMethodResolver = new MethodResolver(nmsClassResolver.resolve("IntHashMap"));
+        }
 
 				entity = IntHashMapMethodResolver.resolve(new ResolverQuery("get", int.class)).invoke(entitiesById, entityId);
 			} else {// > 1.14 uses Int2ObjectMap which implements Map
