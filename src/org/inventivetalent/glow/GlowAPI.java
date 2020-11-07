@@ -1,5 +1,12 @@
 package org.inventivetalent.glow;
 
+import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.World;
@@ -18,15 +25,13 @@ import org.inventivetalent.packetlistener.handler.PacketOptions;
 import org.inventivetalent.packetlistener.handler.ReceivedPacket;
 import org.inventivetalent.packetlistener.handler.SentPacket;
 import org.inventivetalent.reflection.minecraft.Minecraft;
+import org.inventivetalent.reflection.minecraft.Minecraft.Version;
 import org.inventivetalent.reflection.resolver.ConstructorResolver;
 import org.inventivetalent.reflection.resolver.FieldResolver;
 import org.inventivetalent.reflection.resolver.MethodResolver;
 import org.inventivetalent.reflection.resolver.ResolverQuery;
 import org.inventivetalent.reflection.resolver.minecraft.NMSClassResolver;
 import org.inventivetalent.reflection.resolver.minecraft.OBCClassResolver;
-
-import java.lang.reflect.InvocationTargetException;
-import java.util.*;
 
 public class GlowAPI implements API, Listener {
 
@@ -298,8 +303,12 @@ public class GlowAPI implements API, Listener {
 
 			//Existing values
 			Object dataWatcher = EntityMethodResolver.resolve("getDataWatcher").invoke(Minecraft.getHandle(entity));
-			Class dataWatcherItemsType = Minecraft.VERSION.olderThan(Minecraft.Version.v1_14_R1) ? Map.class :
-					isPaper ? Class.forName("it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap") : Class.forName("org.bukkit.craftbukkit.libs.it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap");
+			Class<?> dataWatcherItemsType;
+			if(Minecraft.VERSION.newerThan(Version.v1_7_R1) && Minecraft.VERSION.olderThan(Minecraft.Version.v1_14_R1)){
+				dataWatcherItemsType = Map.class;
+			}else{
+				dataWatcherItemsType = isPaper ? Class.forName("it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap") : Class.forName("org.bukkit.craftbukkit.libs.it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap");;
+			}
 			Map<Integer, Object> dataWatcherItems = (Map<Integer, Object>) DataWatcherFieldResolver.resolveByLastType(dataWatcherItemsType).get(dataWatcher);
 
 			//			Object dataWatcherObject = EntityFieldResolver.resolve("ax").get(null);//Byte-DataWatcherObject
