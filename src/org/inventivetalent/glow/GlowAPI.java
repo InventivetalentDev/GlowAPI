@@ -584,7 +584,7 @@ public class GlowAPI implements API, Listener {
 				if (IntHashMapMethodResolver == null) {
 					IntHashMapMethodResolver = new MethodResolver(nmsClassResolver.resolve("IntHashMap"));
 				}
-				
+
 				entity = IntHashMapMethodResolver.resolve(new ResolverQuery("get", int.class)).invoke(entitiesById, entityId);
 			} else {// > 1.14 uses Int2ObjectMap which implements Map
 				entity = ((Map) entitiesById).get(entityId);
