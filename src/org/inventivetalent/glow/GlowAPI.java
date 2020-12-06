@@ -25,7 +25,7 @@ import org.inventivetalent.packetlistener.handler.PacketOptions;
 import org.inventivetalent.packetlistener.handler.ReceivedPacket;
 import org.inventivetalent.packetlistener.handler.SentPacket;
 import org.inventivetalent.reflection.minecraft.Minecraft;
-import org.inventivetalent.reflection.minecraft.Minecraft.Version;
+import org.inventivetalent.reflection.minecraft.MinecraftVersion;
 import org.inventivetalent.reflection.resolver.ConstructorResolver;
 import org.inventivetalent.reflection.resolver.FieldResolver;
 import org.inventivetalent.reflection.resolver.MethodResolver;
@@ -304,7 +304,7 @@ public class GlowAPI implements API, Listener {
 			//Existing values
 			Object dataWatcher = EntityMethodResolver.resolve("getDataWatcher").invoke(Minecraft.getHandle(entity));
 			Class<?> dataWatcherItemsType;
-			if(Minecraft.VERSION.newerThan(Version.v1_7_R1) && Minecraft.VERSION.olderThan(Minecraft.Version.v1_14_R1)){
+			if(MinecraftVersion.VERSION.newerThan(Minecraft.Version.v1_7_R1) && MinecraftVersion.VERSION.olderThan(Minecraft.Version.v1_14_R1)){
 				dataWatcherItemsType = Map.class;
 			}else{
 				dataWatcherItemsType = isPaper ? Class.forName("it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap") : Class.forName("org.bukkit.craftbukkit.libs.it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap");;
@@ -580,8 +580,8 @@ public class GlowAPI implements API, Listener {
 			Object nmsWorld = CraftWorldFieldResolver.resolve("world").get(world);
 			Object entitiesById;
 			// NOTE: this check can be false, if the v1_14_R1 doesn't exist (stupid java), i.e. in old ReflectionHelper versions
-			if (Minecraft.VERSION.newerThan(Minecraft.Version.v1_8_R1)
-					&& Minecraft.VERSION.olderThan(Minecraft.Version.v1_14_R1)) { /* seriously?! between 1.8 and 1.14 entitiesyId was moved to World */
+			if (MinecraftVersion.VERSION.newerThan(Minecraft.Version.v1_8_R1)
+					&& MinecraftVersion.VERSION.olderThan(Minecraft.Version.v1_14_R1)) { /* seriously?! between 1.8 and 1.14 entitiesyId was moved to World */
 				entitiesById = WorldFieldResolver.resolve("entitiesById").get(nmsWorld);
 			} else {
 				entitiesById = WorldServerFieldResolver.resolve("entitiesById").get(nmsWorld);
@@ -590,7 +590,7 @@ public class GlowAPI implements API, Listener {
 			Object entity;
       // Make sure the version is between 1.7 and 1.14. If the version is UNKNOWN because of a new not yet added version it  will have version -1 which will
       // result in this clause being true and throw an error
-      if (Minecraft.VERSION.newerThan(Minecraft.Version.v1_7_R1) && Minecraft.VERSION.olderThan(Minecraft.Version.v1_14_R1)) {// < 1.14 uses IntHashMap
+      if (MinecraftVersion.VERSION.newerThan(Minecraft.Version.v1_7_R1) && MinecraftVersion.VERSION.olderThan(Minecraft.Version.v1_14_R1)) {// < 1.14 uses IntHashMap
         if (IntHashMapMethodResolver == null) {
           IntHashMapMethodResolver = new MethodResolver(nmsClassResolver.resolve("IntHashMap"));
         }
