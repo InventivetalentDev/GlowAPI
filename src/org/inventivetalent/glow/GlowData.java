@@ -2,6 +2,7 @@ package org.inventivetalent.glow;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 
 public class GlowData {
@@ -16,7 +17,7 @@ public class GlowData {
 
 		GlowData glowData = (GlowData) o;
 
-		return colorMap != null ? colorMap.equals(glowData.colorMap) : glowData.colorMap == null;
+		return Objects.equals(colorMap, glowData.colorMap);
 
 	}
 
