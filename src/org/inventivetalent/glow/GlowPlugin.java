@@ -2,7 +2,6 @@ package org.inventivetalent.glow;
 
 import org.bstats.bukkit.MetricsLite;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.inventivetalent.apihelper.APIManager;
 
 public class GlowPlugin extends JavaPlugin {
 
@@ -12,14 +11,11 @@ public class GlowPlugin extends JavaPlugin {
 	@Override
 	public void onLoad() {
 		instance = this;
-		//Register this API if the plugin got loaded
-		APIManager.registerAPI(glowAPI, this);
 	}
 
 	@Override
 	public void onEnable() {
-		//Initialize this API if the plugin got loaded
-		APIManager.initAPI(GlowAPI.class);
+		glowAPI.init(this);
 
 		new MetricsLite(this, 2190);
 	}
