@@ -92,12 +92,12 @@
         <dependency>
             <groupId>org.inventivetalent.packetlistenerapi</groupId>
             <artifactId>api</artifactId>
-            <version>3.9.2-SNAPSHOT</version>
+            <version>3.9.4-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>org.inventivetalent</groupId>
             <artifactId>reflectionhelper</artifactId>
-            <version>1.17.2-SNAPSHOT</version>
+            <version>1.18.2-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>org.bstats</groupId>
