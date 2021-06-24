@@ -467,7 +467,14 @@ public class GlowAPI implements Listener {
 
 		try {
 			Object handle = Minecraft.getHandle(p);
-			final Object connection = EntityPlayerFieldResolver.resolve("playerConnection").get(handle);
+			final Object connection;
+
+			if (MinecraftVersion.VERSION.newerThan(Minecraft.Version.v1_17_R1)) { // even playerConnection got changed!
+				connection = EntityPlayerFieldResolver.resolve("b").get(handle);
+			} else {
+				connection = EntityPlayerFieldResolver.resolve("playerConnection").get(handle);
+			}
+
 			PlayerConnectionMethodResolver.resolve("sendPacket").invoke(connection, packet);
 		} catch (ReflectiveOperationException e) {
 			throw new RuntimeException(e);
