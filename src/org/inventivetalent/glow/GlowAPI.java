@@ -53,11 +53,20 @@ public class GlowAPI implements Listener {
 	private static MethodResolver EntityMethodResolver;
 
 	//Scoreboard
+	private static Class<?> Scoreboard; // >= 1.17
+	private static Class<?> ScoreboardTeam; // >= 1.17
 	private static Class<?> PacketPlayOutScoreboardTeam;
-	private static Class<?> PacketPlayOutScoreboardTeam$Info; // >= 1.17
+	private static Class<?> PacketPlayOutScoreboardTeam$info; // >= 1.17
 
 	private static FieldResolver PacketScoreboardTeamFieldResolver;
-	private static FieldResolver PacketScoreboardTeam$InfoFieldResolver; // >= 1.17
+
+	private static MethodResolver ScoreboardTeamMethodResolver; // >= 1.17
+
+	private static ConstructorResolver ScoreboardResolver; // >= 1.17
+	private static ConstructorResolver ScoreboardTeamResolver; // >= 1.17
+
+	private static ConstructorResolver PacketScoreboardTeamResolver; // >= 1.17
+	private static ConstructorResolver PacketScoreboardTeamInfoResolver; // >= 1.17
 
 	private static ConstructorResolver ChatComponentTextResolver;
 	private static MethodResolver EnumChatFormatResolver;
@@ -351,8 +360,32 @@ public class GlowAPI implements Listener {
 			if (PacketPlayOutScoreboardTeam == null) {
 				PacketPlayOutScoreboardTeam = NMS_CLASS_RESOLVER.resolve("network.protocol.game.PacketPlayOutScoreboardTeam");
 			}
+			if (PacketScoreboardTeamResolver == null) {
+				PacketScoreboardTeamResolver = new ConstructorResolver(PacketPlayOutScoreboardTeam);
+			}
 			if (PacketScoreboardTeamFieldResolver == null) {
 				PacketScoreboardTeamFieldResolver = new FieldResolver(PacketPlayOutScoreboardTeam);
+			}
+			if (PacketPlayOutScoreboardTeam$info == null) {
+				PacketPlayOutScoreboardTeam$info = NMS_CLASS_RESOLVER.resolve("network.protocol.game.PacketPlayOutScoreboardTeam$b");
+			}
+			if (PacketScoreboardTeamInfoResolver == null) {
+				PacketScoreboardTeamInfoResolver = new ConstructorResolver(PacketPlayOutScoreboardTeam$info);
+			}
+			if (Scoreboard == null) {
+				Scoreboard = NMS_CLASS_RESOLVER.resolve("world.scores.Scoreboard");
+			}
+			if (ScoreboardResolver == null) {
+				ScoreboardResolver = new ConstructorResolver(Scoreboard);
+			}
+			if (ScoreboardTeam == null) {
+				ScoreboardTeam = NMS_CLASS_RESOLVER.resolve("world.scores.ScoreboardTeam");
+			}
+			if (ScoreboardTeamResolver == null) {
+				ScoreboardTeamResolver = new ConstructorResolver(ScoreboardTeam);
+			}
+			if (ScoreboardTeamMethodResolver == null) {
+				ScoreboardTeamMethodResolver = new MethodResolver(ScoreboardTeam);
 			}
 			if(ChatComponentTextResolver == null) {
 				ChatComponentTextResolver = new ConstructorResolver(NMS_CLASS_RESOLVER.resolve("network.chat.ChatComponentText"));
@@ -360,25 +393,19 @@ public class GlowAPI implements Listener {
 
 			final int mode = (createNewTeam ? 0 : addEntity ? 3 : 4); //Mode (0 = create, 3 = add entity, 4 = remove entity)
 
-			Object packetScoreboardTeam;
-			Collection<String> entitiesList = null;
+			Object nms$Scoreboard;
+			Object nms$ScoreboardTeam = null;
+			Object packetScoreboardTeam = null;
 
 			if (MinecraftVersion.VERSION.newerThan(Minecraft.Version.v1_17_R1)) {
-				packetScoreboardTeam = ObjenesisHelper.newInstance(PacketPlayOutScoreboardTeam);
-
-				PacketScoreboardTeamFieldResolver.resolve("i").set(packetScoreboardTeam, color.getTeamName());//Name
-				PacketScoreboardTeamFieldResolver.resolve("h").set(packetScoreboardTeam, mode);//Mode
+				nms$Scoreboard = ScoreboardResolver.resolveFirstConstructor().newInstance();
+				nms$ScoreboardTeam = ScoreboardTeamResolver.resolveFirstConstructor().newInstance(nms$Scoreboard, color.getTeamName());
 
 				if (addEntity) {
-					entitiesList = Lists.newArrayList();
-				} else {
-					entitiesList = ImmutableList.of();
+					packetScoreboardTeam = PacketScoreboardTeamResolver.resolveFirstConstructor().newInstance(color.getTeamName(), mode, Optional.empty(), Lists.newArrayList());
 				}
-				PacketScoreboardTeamFieldResolver.resolve("j").set(packetScoreboardTeam, entitiesList);//Entities List
-
 			} else {
 				packetScoreboardTeam = PacketPlayOutScoreboardTeam.newInstance();
-
 				PacketScoreboardTeamFieldResolver.resolve("i").set(packetScoreboardTeam, mode);//Mode
 				PacketScoreboardTeamFieldResolver.resolve("a").set(packetScoreboardTeam, color.getTeamName());//Name
 				PacketScoreboardTeamFieldResolver.resolve("e").set(packetScoreboardTeam, tagVisibility);//NameTag visibility
@@ -391,24 +418,14 @@ public class GlowAPI implements Listener {
 				Object suffix = ChatComponentTextResolver.resolveFirstConstructor().newInstance("");
 
 				if (MinecraftVersion.VERSION.newerThan(Minecraft.Version.v1_17_R1)) {
-					if (PacketPlayOutScoreboardTeam$Info == null) {
-						PacketPlayOutScoreboardTeam$Info = NMS_CLASS_RESOLVER.resolve("network.protocol.game.PacketPlayOutScoreboardTeam$b");
-					}
-					if (PacketScoreboardTeam$InfoFieldResolver == null) {
-						PacketScoreboardTeam$InfoFieldResolver = new FieldResolver(PacketPlayOutScoreboardTeam$Info);
-					}
+					assert nms$ScoreboardTeam != null;
+					ScoreboardTeamMethodResolver.resolve("setDisplayName").invoke(nms$ScoreboardTeam, displayName);
+					ScoreboardTeamMethodResolver.resolve("setPrefix").invoke(nms$ScoreboardTeam, prefix);
+					ScoreboardTeamMethodResolver.resolve("setSuffix").invoke(nms$ScoreboardTeam, suffix);
+					ScoreboardTeamMethodResolver.resolve("setColor").invoke(nms$ScoreboardTeam, color.packetValue);
 
-					Object packetScoreboardTeamInfo = ObjenesisHelper.newInstance(PacketPlayOutScoreboardTeam$Info);
-					PacketScoreboardTeam$InfoFieldResolver.resolve("a").set(packetScoreboardTeamInfo, displayName);// Display name
-					PacketScoreboardTeam$InfoFieldResolver.resolve("g").set(packetScoreboardTeamInfo, 0);//Friendly Flag
-					PacketScoreboardTeam$InfoFieldResolver.resolve("d").set(packetScoreboardTeamInfo, "always");//Name Tag Visibility
-					PacketScoreboardTeam$InfoFieldResolver.resolve("e").set(packetScoreboardTeamInfo, "always");//Team push
-					PacketScoreboardTeam$InfoFieldResolver.resolve("f").set(packetScoreboardTeamInfo, color.packetValue);//Team Color (important)
-					PacketScoreboardTeam$InfoFieldResolver.resolve("b").set(packetScoreboardTeamInfo, prefix);//Team Prefix
-					PacketScoreboardTeam$InfoFieldResolver.resolve("c").set(packetScoreboardTeamInfo, suffix);//Team Suffix
-
-					// update the team info reference in the packet <- the most important step!!
-					PacketScoreboardTeamFieldResolver.resolve("k").set(packetScoreboardTeam, packetScoreboardTeamInfo);
+					Object packetScoreboardTeamInfo = PacketScoreboardTeamInfoResolver.resolveFirstConstructor().newInstance(nms$ScoreboardTeam);
+					packetScoreboardTeam = PacketScoreboardTeamResolver.resolve(new Class[] {String.class, int.class, Optional.class, Collection.class}).newInstance(color.getTeamName(), mode, Optional.of(packetScoreboardTeamInfo), ImmutableList.of());
 				} else {
 					PacketScoreboardTeamFieldResolver.resolve("g").set(packetScoreboardTeam, color.packetValue);//Color -> this is what we care about
 
@@ -420,7 +437,10 @@ public class GlowAPI implements Listener {
 			} else {
 				/* Add/remove players */
 
-				if (entitiesList == null) { // < 1.17
+				Collection<String> entitiesList;
+				if (MinecraftVersion.VERSION.newerThan(Minecraft.Version.v1_17_R1)) {
+					entitiesList = ((Collection<String>) PacketScoreboardTeamFieldResolver.resolve("j").get(packetScoreboardTeam));
+				} else {
 					entitiesList = ((Collection<String>) PacketScoreboardTeamFieldResolver.resolve("h").get(packetScoreboardTeam));
 				}
 
