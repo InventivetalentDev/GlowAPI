@@ -46,6 +46,7 @@ public class GlowAPI implements Listener {
 	private static FieldResolver DataWatcherFieldResolver;
 	static         FieldResolver DataWatcherItemFieldResolver;
 
+	private static ConstructorResolver PacketPlayOutMetadataResolver;
 	private static ConstructorResolver DataWatcherItemConstructorResolver;
 
 	private static MethodResolver DataWatcherMethodResolver;
@@ -279,13 +280,16 @@ public class GlowAPI implements Listener {
 				DataWatcher = NMS_CLASS_RESOLVER.resolve("network.syncher.DataWatcher");
 			}
 			if (DataWatcherItem == null) {
-				DataWatcherItem = NMS_CLASS_RESOLVER.resolve("network.syncher.DataWatcherObject", "DataWatcher$Item");
+				DataWatcherItem = NMS_CLASS_RESOLVER.resolve("network.syncher.DataWatcher$Item");
 			}
 			if (Entity == null) {
 				Entity = NMS_CLASS_RESOLVER.resolve("world.entity.Entity");
 			}
 			if (PacketPlayOutMetadataFieldResolver == null) {
 				PacketPlayOutMetadataFieldResolver = new FieldResolver(PacketPlayOutEntityMetadata);
+			}
+			if (PacketPlayOutMetadataResolver == null) {
+				PacketPlayOutMetadataResolver = new ConstructorResolver(PacketPlayOutEntityMetadata);
 			}
 			if (DataWatcherItemConstructorResolver == null) {
 				DataWatcherItemConstructorResolver = new ConstructorResolver(DataWatcherItem);
@@ -310,8 +314,22 @@ public class GlowAPI implements Listener {
 
 			//Existing values
 			Object dataWatcher = EntityMethodResolver.resolve("getDataWatcher").invoke(Minecraft.getHandle(entity));
-			Class dataWatcherItemsType = MinecraftVersion.VERSION.olderThan(Minecraft.Version.v1_14_R1) ? Map.class :
-					isPaper ? Class.forName("it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap") : Class.forName("org.bukkit.craftbukkit.libs.it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap");
+			Class dataWatcherItemsType;
+			if (MinecraftVersion.VERSION.olderThan(Minecraft.Version.v1_14_R1)) {
+				dataWatcherItemsType = Map.class;
+			} else if (MinecraftVersion.VERSION.olderThan(Minecraft.Version.v1_17_R1)) {
+				if (isPaper) {
+					dataWatcherItemsType = Class.forName("it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap");
+				} else {
+					dataWatcherItemsType = Class.forName("org.bukkit.craftbukkit.libs.it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap");
+				}
+			} else { // >= 1.17
+				if (isPaper) {
+					dataWatcherItemsType = Class.forName("it.unimi.dsi.fastutil.ints.Int2ObjectMap");
+				} else {
+					dataWatcherItemsType = Class.forName("org.bukkit.craftbukkit.libs.it.unimi.dsi.fastutil.ints.Int2ObjectMap");
+				}
+			}
 			Map<Integer, Object> dataWatcherItems = (Map<Integer, Object>) DataWatcherFieldResolver.resolveByLastType(dataWatcherItemsType).get(dataWatcher);
 
 			//			Object dataWatcherObject = EntityFieldResolver.resolve("ax").get(null);//Byte-DataWatcherObject
@@ -323,9 +341,18 @@ public class GlowAPI implements Listener {
 			//The glowing item
 			list.add(dataWatcherItem);
 
-			Object packetMetadata = PacketPlayOutEntityMetadata.newInstance();
-			PacketPlayOutMetadataFieldResolver.resolve("a").set(packetMetadata, -entity.getEntityId());//Use the negative ID so we can identify our own packet
-			PacketPlayOutMetadataFieldResolver.resolve("b").set(packetMetadata, list);
+			Object packetMetadata;
+			if (MinecraftVersion.VERSION.newerThan(Minecraft.Version.v1_17_R1)) {
+				packetMetadata = PacketPlayOutMetadataResolver.resolve(new Class[] { int.class, DataWatcher, boolean.class }).newInstance(-entity.getEntityId(), dataWatcher, true);
+
+				List dataWatcherList = (List) PacketPlayOutMetadataFieldResolver.resolve("b").get(packetMetadata);
+				dataWatcherList.clear();
+				dataWatcherList.addAll(list);
+			} else {
+				packetMetadata = PacketPlayOutEntityMetadata.newInstance();
+				PacketPlayOutMetadataFieldResolver.resolve("a").set(packetMetadata, -entity.getEntityId());// Use the negative ID so we can identify our own packet
+				PacketPlayOutMetadataFieldResolver.resolve("b").set(packetMetadata, list);
+			}
 
 			sendPacket(packetMetadata, receiver);
 		} catch (ReflectiveOperationException e) {
@@ -400,10 +427,6 @@ public class GlowAPI implements Listener {
 			if (MinecraftVersion.VERSION.newerThan(Minecraft.Version.v1_17_R1)) {
 				nms$Scoreboard = ScoreboardResolver.resolveFirstConstructor().newInstance();
 				nms$ScoreboardTeam = ScoreboardTeamResolver.resolveFirstConstructor().newInstance(nms$Scoreboard, color.getTeamName());
-
-				if (addEntity) {
-					packetScoreboardTeam = PacketScoreboardTeamResolver.resolveFirstConstructor().newInstance(color.getTeamName(), mode, Optional.empty(), Lists.newArrayList());
-				}
 			} else {
 				packetScoreboardTeam = PacketPlayOutScoreboardTeam.newInstance();
 				PacketScoreboardTeamFieldResolver.resolve("i").set(packetScoreboardTeam, mode);//Mode
@@ -439,7 +462,7 @@ public class GlowAPI implements Listener {
 
 				Collection<String> entitiesList;
 				if (MinecraftVersion.VERSION.newerThan(Minecraft.Version.v1_17_R1)) {
-					entitiesList = ((Collection<String>) PacketScoreboardTeamFieldResolver.resolve("j").get(packetScoreboardTeam));
+					entitiesList = Lists.newArrayList();
 				} else {
 					entitiesList = ((Collection<String>) PacketScoreboardTeamFieldResolver.resolve("h").get(packetScoreboardTeam));
 				}
@@ -448,6 +471,10 @@ public class GlowAPI implements Listener {
 					entitiesList.add(entity.getName());
 				} else {
 					entitiesList.add(entity.getUniqueId().toString());
+				}
+
+				if (MinecraftVersion.VERSION.newerThan(Minecraft.Version.v1_17_R1)) {
+					packetScoreboardTeam = PacketScoreboardTeamResolver.resolve(new Class[]{String.class, int.class, Optional.class, Collection.class}).newInstance(color.getTeamName(), mode, Optional.empty(), Lists.newArrayList());
 				}
 			}
 
