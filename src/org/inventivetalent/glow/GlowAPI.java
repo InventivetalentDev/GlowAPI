@@ -259,16 +259,16 @@ public class GlowAPI implements Listener {
 	protected static void sendGlowPacket(Entity entity, boolean wasGlowing, boolean glowing, Player receiver) {
 		try {
 			if (PacketPlayOutEntityMetadata == null) {
-				PacketPlayOutEntityMetadata = NMS_CLASS_RESOLVER.resolve("PacketPlayOutEntityMetadata");
+				PacketPlayOutEntityMetadata = NMS_CLASS_RESOLVER.resolve("network.protocol.game.PacketPlayOutEntityMetadata");
 			}
 			if (DataWatcher == null) {
-				DataWatcher = NMS_CLASS_RESOLVER.resolve("DataWatcher");
+				DataWatcher = NMS_CLASS_RESOLVER.resolve("network.syncher.DataWatcher");
 			}
 			if (DataWatcherItem == null) {
-				DataWatcherItem = NMS_CLASS_RESOLVER.resolve("DataWatcher$Item");
+				DataWatcherItem = NMS_CLASS_RESOLVER.resolve("network.syncher.DataWatcherObject", "DataWatcher$Item");
 			}
 			if (Entity == null) {
-				Entity = NMS_CLASS_RESOLVER.resolve("Entity");
+				Entity = NMS_CLASS_RESOLVER.resolve("world.entity.Entity");
 			}
 			if (PacketPlayOutMetadataFieldResolver == null) {
 				PacketPlayOutMetadataFieldResolver = new FieldResolver(PacketPlayOutEntityMetadata);
@@ -344,13 +344,13 @@ public class GlowAPI implements Listener {
 	protected static void sendTeamPacket(Entity entity, Color color, boolean createNewTeam/*If true, we don't add any entities*/, boolean addEntity/*true->add the entity, false->remove the entity*/, String tagVisibility, String push, Player receiver) {
 		try {
 			if (PacketPlayOutScoreboardTeam == null) {
-				PacketPlayOutScoreboardTeam = NMS_CLASS_RESOLVER.resolve("PacketPlayOutScoreboardTeam");
+				PacketPlayOutScoreboardTeam = NMS_CLASS_RESOLVER.resolve("network.protocol.game.PacketPlayOutScoreboardTeam");
 			}
 			if (PacketScoreboardTeamFieldResolver == null) {
 				PacketScoreboardTeamFieldResolver = new FieldResolver(PacketPlayOutScoreboardTeam);
 			}
 			if(ChatComponentTextResolver == null) {
-				ChatComponentTextResolver = new ConstructorResolver(NMS_CLASS_RESOLVER.resolve("ChatComponentText"));
+				ChatComponentTextResolver = new ConstructorResolver(NMS_CLASS_RESOLVER.resolve("network.chat.ChatComponentText"));
 			}
 
 			Object packetScoreboardTeam = PacketPlayOutScoreboardTeam.newInstance();
@@ -390,10 +390,10 @@ public class GlowAPI implements Listener {
 
 	protected static void sendPacket(Object packet, Player p) throws IllegalArgumentException, IllegalAccessException, InvocationTargetException, ClassNotFoundException, NoSuchFieldException, NoSuchMethodException {
 		if (EntityPlayerFieldResolver == null) {
-			EntityPlayerFieldResolver = new FieldResolver(NMS_CLASS_RESOLVER.resolve("EntityPlayer"));
+			EntityPlayerFieldResolver = new FieldResolver(NMS_CLASS_RESOLVER.resolve("server.level.EntityPlayer"));
 		}
 		if (PlayerConnectionMethodResolver == null) {
-			PlayerConnectionMethodResolver = new MethodResolver(NMS_CLASS_RESOLVER.resolve("PlayerConnection"));
+			PlayerConnectionMethodResolver = new MethodResolver(NMS_CLASS_RESOLVER.resolve("server.network.PlayerConnection"));
 		}
 
 		try {
@@ -541,13 +541,13 @@ public class GlowAPI implements Listener {
 				CraftWorldFieldResolver = new FieldResolver(obcClassResolver.resolve("CraftWorld"));
 			}
 			if (WorldFieldResolver == null) {
-				WorldFieldResolver = new FieldResolver(nmsClassResolver.resolve("World"));
+				WorldFieldResolver = new FieldResolver(nmsClassResolver.resolve("world.level.World"));
 			}
 			if (WorldServerFieldResolver == null) {
-				WorldServerFieldResolver = new FieldResolver(nmsClassResolver.resolve("WorldServer"));
+				WorldServerFieldResolver = new FieldResolver(nmsClassResolver.resolve("server.level.WorldServer"));
 			}
 			if (EntityMethodResolver == null) {
-				EntityMethodResolver = new MethodResolver(nmsClassResolver.resolve("Entity"));
+				EntityMethodResolver = new MethodResolver(nmsClassResolver.resolve("world.entity.Entity"));
 			}
 
 			Object nmsWorld = CraftWorldFieldResolver.resolve("world").get(world);
