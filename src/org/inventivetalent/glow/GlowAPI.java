@@ -599,10 +599,13 @@ public class GlowAPI implements Listener {
 	protected static NMSClassResolver nmsClassResolver = new NMSClassResolver();
 	protected static OBCClassResolver obcClassResolver = new OBCClassResolver();
 
+	private static Class<?> LevelEntityGetter;
+
 	private static FieldResolver  CraftWorldFieldResolver;
 	private static FieldResolver  WorldFieldResolver;
 	private static FieldResolver  WorldServerFieldResolver;
 	private static MethodResolver IntHashMapMethodResolver;
+	private static MethodResolver LevelEntityGetterMethodResolver;
 
 	public static Entity getEntityById(World world, int entityId) {
 		try {
@@ -618,6 +621,12 @@ public class GlowAPI implements Listener {
 			if (EntityMethodResolver == null) {
 				EntityMethodResolver = new MethodResolver(nmsClassResolver.resolve("world.entity.Entity"));
 			}
+			if (LevelEntityGetter == null) {
+				LevelEntityGetter = nmsClassResolver.resolve("world.level.entity.LevelEntityGetter");
+			}
+			if (LevelEntityGetterMethodResolver == null) {
+				LevelEntityGetterMethodResolver = new MethodResolver(LevelEntityGetter);
+			}
 
 			Object nmsWorld = CraftWorldFieldResolver.resolve("world").get(world);
 			Object entitiesById;
@@ -625,8 +634,12 @@ public class GlowAPI implements Listener {
 			if (MinecraftVersion.VERSION.newerThan(Minecraft.Version.v1_8_R1)
 					&& MinecraftVersion.VERSION.olderThan(Minecraft.Version.v1_14_R1)) { /* seriously?! between 1.8 and 1.14 entitiesyId was moved to World */
 				entitiesById = WorldFieldResolver.resolve("entitiesById").get(nmsWorld);
-			} else {
+			} else if (MinecraftVersion.VERSION.olderThan(Minecraft.Version.v1_17_R1)) { /* another change!! between 1.15 and 1.16.5... seriously?! */
 				entitiesById = WorldServerFieldResolver.resolve("entitiesById").get(nmsWorld);
+			} else {
+				// calls `WorldServer#getEntities()` to get the LevelEntityGetter (nvm it has AsyncCatcher)
+				Object persistentManager = WorldServerFieldResolver.resolve("G").get(nmsWorld);
+				entitiesById = persistentManager.getClass().getMethod("d").invoke(persistentManager);
 			}
 
 			Object entity;
@@ -636,8 +649,11 @@ public class GlowAPI implements Listener {
 				}
 
 				entity = IntHashMapMethodResolver.resolve(new ResolverQuery("get", int.class)).invoke(entitiesById, entityId);
-			} else {// > 1.14 uses Int2ObjectMap which implements Map
+			} else if (MinecraftVersion.VERSION.olderThan(Minecraft.Version.v1_17_R1)) {// > 1.14 && < 1.17 uses Int2ObjectMap which implements Map
 				entity = ((Map) entitiesById).get(entityId);
+			} else { /* sighs */
+				// calls `LevelEntityGetter#a(int)` to get an entity by id
+				entity = LevelEntityGetterMethodResolver.resolve(new ResolverQuery("a", int.class)).invoke(entitiesById, entityId);
 			}
 			if (entity == null) { return null; }
 			return (Entity) EntityMethodResolver.resolve("getBukkitEntity").invoke(entity);
