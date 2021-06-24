@@ -51,6 +51,7 @@
                             <artifactSet>
                                 <includes>
                                     <include>org.bstats:*</include>
+                                    <include>org.objenesis:*</include>
                                     <include>org.inventivetalent:glowapi**</include>
                                     <include>org.inventivetalent:reflectionhelper**</include>
                                     <include>org.inventivetalent:apimanager**</include>
@@ -60,6 +61,10 @@
                                 <relocation>
                                     <pattern>org.bstats</pattern>
                                     <shadedPattern>org.inventivetalent.glowapi</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>org.objenesis</pattern>
+                                    <shadedPattern>org.inventivetalent.glow.objenesis</shadedPattern>
                                 </relocation>
                                 <relocation>
                                     <pattern>org.inventivetalent.reflection</pattern>
@@ -103,6 +108,11 @@
             <groupId>org.bstats</groupId>
             <artifactId>bstats-bukkit-lite</artifactId>
             <version>1.7</version>
+        </dependency>
+        <dependency>
+            <groupId>org.objenesis</groupId>
+            <artifactId>objenesis</artifactId>
+            <version>3.2</version>
         </dependency>
     </dependencies>
 
