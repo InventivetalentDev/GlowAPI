@@ -1,5 +1,7 @@
 package org.inventivetalent.glow;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.World;
@@ -22,6 +24,7 @@ import org.inventivetalent.reflection.resolver.MethodResolver;
 import org.inventivetalent.reflection.resolver.ResolverQuery;
 import org.inventivetalent.reflection.resolver.minecraft.NMSClassResolver;
 import org.inventivetalent.reflection.resolver.minecraft.OBCClassResolver;
+import org.objenesis.ObjenesisHelper;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.*;
@@ -51,8 +54,10 @@ public class GlowAPI implements Listener {
 
 	//Scoreboard
 	private static Class<?> PacketPlayOutScoreboardTeam;
+	private static Class<?> PacketPlayOutScoreboardTeam$Info; // >= 1.17
 
 	private static FieldResolver PacketScoreboardTeamFieldResolver;
+	private static FieldResolver PacketScoreboardTeam$InfoFieldResolver; // >= 1.17
 
 	private static ConstructorResolver ChatComponentTextResolver;
 	private static MethodResolver EnumChatFormatResolver;
@@ -353,32 +358,76 @@ public class GlowAPI implements Listener {
 				ChatComponentTextResolver = new ConstructorResolver(NMS_CLASS_RESOLVER.resolve("network.chat.ChatComponentText"));
 			}
 
-			Object packetScoreboardTeam = PacketPlayOutScoreboardTeam.newInstance();
-			PacketScoreboardTeamFieldResolver.resolve("i").set(packetScoreboardTeam, createNewTeam ? 0 : addEntity ? 3 : 4);//Mode (0 = create, 3 = add entity, 4 = remove entity)
-			PacketScoreboardTeamFieldResolver.resolve("a").set(packetScoreboardTeam, color.getTeamName());//Name
-			PacketScoreboardTeamFieldResolver.resolve("e").set(packetScoreboardTeam, tagVisibility);//NameTag visibility
-			PacketScoreboardTeamFieldResolver.resolve("f").set(packetScoreboardTeam, push);//Team-push
+			final int mode = (createNewTeam ? 0 : addEntity ? 3 : 4); //Mode (0 = create, 3 = add entity, 4 = remove entity)
+
+			Object packetScoreboardTeam;
+			Collection<String> entitiesList = null;
+
+			if (MinecraftVersion.VERSION.newerThan(Minecraft.Version.v1_17_R1)) {
+				packetScoreboardTeam = ObjenesisHelper.newInstance(PacketPlayOutScoreboardTeam);
+
+				PacketScoreboardTeamFieldResolver.resolve("i").set(packetScoreboardTeam, color.getTeamName());//Name
+				PacketScoreboardTeamFieldResolver.resolve("h").set(packetScoreboardTeam, mode);//Mode
+
+				if (addEntity) {
+					entitiesList = Lists.newArrayList();
+				} else {
+					entitiesList = ImmutableList.of();
+				}
+				PacketScoreboardTeamFieldResolver.resolve("j").set(packetScoreboardTeam, entitiesList);//Entities List
+
+			} else {
+				packetScoreboardTeam = PacketPlayOutScoreboardTeam.newInstance();
+
+				PacketScoreboardTeamFieldResolver.resolve("i").set(packetScoreboardTeam, mode);//Mode
+				PacketScoreboardTeamFieldResolver.resolve("a").set(packetScoreboardTeam, color.getTeamName());//Name
+				PacketScoreboardTeamFieldResolver.resolve("e").set(packetScoreboardTeam, tagVisibility);//NameTag visibility
+				PacketScoreboardTeamFieldResolver.resolve("f").set(packetScoreboardTeam, push);//Team-push
+			}
 
 			if (createNewTeam) {
-				PacketScoreboardTeamFieldResolver.resolve("g").set(packetScoreboardTeam, color.packetValue);//Color -> this is what we care about
-
 				Object prefix = ChatComponentTextResolver.resolveFirstConstructor().newInstance("§" + color.colorCode);
 				Object displayName = ChatComponentTextResolver.resolveFirstConstructor().newInstance(color.getTeamName());
 				Object suffix = ChatComponentTextResolver.resolveFirstConstructor().newInstance("");
 
-				PacketScoreboardTeamFieldResolver.resolve("c").set(packetScoreboardTeam, prefix);//prefix - for some reason this controls the color, even though there's the extra color value...
-				PacketScoreboardTeamFieldResolver.resolve("b").set(packetScoreboardTeam, displayName);//Display name
-				PacketScoreboardTeamFieldResolver.resolve("d").set(packetScoreboardTeam, suffix);//suffix
-				PacketScoreboardTeamFieldResolver.resolve("j").set(packetScoreboardTeam, 0);//Options - let's just ignore them for now
-			}
+				if (MinecraftVersion.VERSION.newerThan(Minecraft.Version.v1_17_R1)) {
+					if (PacketPlayOutScoreboardTeam$Info == null) {
+						PacketPlayOutScoreboardTeam$Info = NMS_CLASS_RESOLVER.resolve("network.protocol.game.PacketPlayOutScoreboardTeam$b");
+					}
+					if (PacketScoreboardTeam$InfoFieldResolver == null) {
+						PacketScoreboardTeam$InfoFieldResolver = new FieldResolver(PacketPlayOutScoreboardTeam$Info);
+					}
 
-			if (!createNewTeam) {
-				//Add/remove players
-				Collection<String> collection = ((Collection<String>) PacketScoreboardTeamFieldResolver.resolve("h").get(packetScoreboardTeam));
-				if (entity instanceof OfflinePlayer) {//Players still use the name...
-					collection.add(entity.getName());
+					Object packetScoreboardTeamInfo = ObjenesisHelper.newInstance(PacketPlayOutScoreboardTeam$Info);
+					PacketScoreboardTeam$InfoFieldResolver.resolve("a").set(packetScoreboardTeamInfo, displayName);// Display name
+					PacketScoreboardTeam$InfoFieldResolver.resolve("g").set(packetScoreboardTeamInfo, 0);//Friendly Flag
+					PacketScoreboardTeam$InfoFieldResolver.resolve("d").set(packetScoreboardTeamInfo, "always");//Name Tag Visibility
+					PacketScoreboardTeam$InfoFieldResolver.resolve("e").set(packetScoreboardTeamInfo, "always");//Team push
+					PacketScoreboardTeam$InfoFieldResolver.resolve("f").set(packetScoreboardTeamInfo, color.packetValue);//Team Color (important)
+					PacketScoreboardTeam$InfoFieldResolver.resolve("b").set(packetScoreboardTeamInfo, prefix);//Team Prefix
+					PacketScoreboardTeam$InfoFieldResolver.resolve("c").set(packetScoreboardTeamInfo, suffix);//Team Suffix
+
+					// update the team info reference in the packet <- the most important step!!
+					PacketScoreboardTeamFieldResolver.resolve("k").set(packetScoreboardTeam, packetScoreboardTeamInfo);
 				} else {
-					collection.add(entity.getUniqueId().toString());
+					PacketScoreboardTeamFieldResolver.resolve("g").set(packetScoreboardTeam, color.packetValue);//Color -> this is what we care about
+
+					PacketScoreboardTeamFieldResolver.resolve("c").set(packetScoreboardTeam, prefix);//prefix - for some reason this controls the color, even though there's the extra color value...
+					PacketScoreboardTeamFieldResolver.resolve("b").set(packetScoreboardTeam, displayName);//Display name
+					PacketScoreboardTeamFieldResolver.resolve("d").set(packetScoreboardTeam, suffix);//suffix
+					PacketScoreboardTeamFieldResolver.resolve("j").set(packetScoreboardTeam, 0);//Options - let's just ignore them for now
+				}
+			} else {
+				/* Add/remove players */
+
+				if (entitiesList == null) { // < 1.17
+					entitiesList = ((Collection<String>) PacketScoreboardTeamFieldResolver.resolve("h").get(packetScoreboardTeam));
+				}
+
+				if (entity instanceof OfflinePlayer) {//Players still use the name...
+					entitiesList.add(entity.getName());
+				} else {
+					entitiesList.add(entity.getUniqueId().toString());
 				}
 			}
 
