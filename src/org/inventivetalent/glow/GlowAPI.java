@@ -24,7 +24,6 @@ import org.inventivetalent.reflection.resolver.MethodResolver;
 import org.inventivetalent.reflection.resolver.ResolverQuery;
 import org.inventivetalent.reflection.resolver.minecraft.NMSClassResolver;
 import org.inventivetalent.reflection.resolver.minecraft.OBCClassResolver;
-import org.objenesis.ObjenesisHelper;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.*;
@@ -474,7 +473,7 @@ public class GlowAPI implements Listener {
 				}
 
 				if (MinecraftVersion.VERSION.newerThan(Minecraft.Version.v1_17_R1)) {
-					packetScoreboardTeam = PacketScoreboardTeamResolver.resolve(new Class[]{String.class, int.class, Optional.class, Collection.class}).newInstance(color.getTeamName(), mode, Optional.empty(), Lists.newArrayList());
+					packetScoreboardTeam = PacketScoreboardTeamResolver.resolve(new Class[]{String.class, int.class, Optional.class, Collection.class}).newInstance(color.getTeamName(), mode, Optional.empty(), entitiesList);
 				}
 			}
 
