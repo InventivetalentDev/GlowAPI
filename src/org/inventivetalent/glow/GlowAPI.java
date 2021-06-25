@@ -1,5 +1,7 @@
 package org.inventivetalent.glow;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.World;
@@ -43,6 +45,7 @@ public class GlowAPI implements Listener {
 	private static FieldResolver DataWatcherFieldResolver;
 	static         FieldResolver DataWatcherItemFieldResolver;
 
+	private static ConstructorResolver PacketPlayOutMetadataResolver;
 	private static ConstructorResolver DataWatcherItemConstructorResolver;
 
 	private static MethodResolver DataWatcherMethodResolver;
@@ -50,9 +53,23 @@ public class GlowAPI implements Listener {
 	private static MethodResolver EntityMethodResolver;
 
 	//Scoreboard
+	private static Object nms$Scoreboard;
+	private static ArrayList<String> scoreboardTeamEntityList;
+
+	private static Class<?> Scoreboard; // >= 1.17
+	private static Class<?> ScoreboardTeam; // >= 1.17
 	private static Class<?> PacketPlayOutScoreboardTeam;
+	private static Class<?> PacketPlayOutScoreboardTeam$info; // >= 1.17
 
 	private static FieldResolver PacketScoreboardTeamFieldResolver;
+
+	private static MethodResolver ScoreboardTeamMethodResolver; // >= 1.17
+
+	private static ConstructorResolver ScoreboardResolver; // >= 1.17
+	private static ConstructorResolver ScoreboardTeamResolver; // >= 1.17
+
+	private static ConstructorResolver PacketScoreboardTeamResolver; // >= 1.17
+	private static ConstructorResolver PacketScoreboardTeamInfoResolver; // >= 1.17
 
 	private static ConstructorResolver ChatComponentTextResolver;
 	private static MethodResolver EnumChatFormatResolver;
@@ -259,19 +276,22 @@ public class GlowAPI implements Listener {
 	protected static void sendGlowPacket(Entity entity, boolean wasGlowing, boolean glowing, Player receiver) {
 		try {
 			if (PacketPlayOutEntityMetadata == null) {
-				PacketPlayOutEntityMetadata = NMS_CLASS_RESOLVER.resolve("PacketPlayOutEntityMetadata");
+				PacketPlayOutEntityMetadata = NMS_CLASS_RESOLVER.resolve("network.protocol.game.PacketPlayOutEntityMetadata");
 			}
 			if (DataWatcher == null) {
-				DataWatcher = NMS_CLASS_RESOLVER.resolve("DataWatcher");
+				DataWatcher = NMS_CLASS_RESOLVER.resolve("network.syncher.DataWatcher");
 			}
 			if (DataWatcherItem == null) {
-				DataWatcherItem = NMS_CLASS_RESOLVER.resolve("DataWatcher$Item");
+				DataWatcherItem = NMS_CLASS_RESOLVER.resolve("network.syncher.DataWatcher$Item");
 			}
 			if (Entity == null) {
-				Entity = NMS_CLASS_RESOLVER.resolve("Entity");
+				Entity = NMS_CLASS_RESOLVER.resolve("world.entity.Entity");
 			}
 			if (PacketPlayOutMetadataFieldResolver == null) {
 				PacketPlayOutMetadataFieldResolver = new FieldResolver(PacketPlayOutEntityMetadata);
+			}
+			if (PacketPlayOutMetadataResolver == null) {
+				PacketPlayOutMetadataResolver = new ConstructorResolver(PacketPlayOutEntityMetadata);
 			}
 			if (DataWatcherItemConstructorResolver == null) {
 				DataWatcherItemConstructorResolver = new ConstructorResolver(DataWatcherItem);
@@ -296,8 +316,22 @@ public class GlowAPI implements Listener {
 
 			//Existing values
 			Object dataWatcher = EntityMethodResolver.resolve("getDataWatcher").invoke(Minecraft.getHandle(entity));
-			Class dataWatcherItemsType = MinecraftVersion.VERSION.olderThan(Minecraft.Version.v1_14_R1) ? Map.class :
-					isPaper ? Class.forName("it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap") : Class.forName("org.bukkit.craftbukkit.libs.it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap");
+			Class dataWatcherItemsType;
+			if (MinecraftVersion.VERSION.olderThan(Minecraft.Version.v1_14_R1)) {
+				dataWatcherItemsType = Map.class;
+			} else if (MinecraftVersion.VERSION.olderThan(Minecraft.Version.v1_17_R1)) {
+				if (isPaper) {
+					dataWatcherItemsType = Class.forName("it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap");
+				} else {
+					dataWatcherItemsType = Class.forName("org.bukkit.craftbukkit.libs.it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap");
+				}
+			} else { // >= 1.17
+				if (isPaper) {
+					dataWatcherItemsType = Class.forName("it.unimi.dsi.fastutil.ints.Int2ObjectMap");
+				} else {
+					dataWatcherItemsType = Class.forName("org.bukkit.craftbukkit.libs.it.unimi.dsi.fastutil.ints.Int2ObjectMap");
+				}
+			}
 			Map<Integer, Object> dataWatcherItems = (Map<Integer, Object>) DataWatcherFieldResolver.resolveByLastType(dataWatcherItemsType).get(dataWatcher);
 
 			//			Object dataWatcherObject = EntityFieldResolver.resolve("ax").get(null);//Byte-DataWatcherObject
@@ -309,9 +343,18 @@ public class GlowAPI implements Listener {
 			//The glowing item
 			list.add(dataWatcherItem);
 
-			Object packetMetadata = PacketPlayOutEntityMetadata.newInstance();
-			PacketPlayOutMetadataFieldResolver.resolve("a").set(packetMetadata, -entity.getEntityId());//Use the negative ID so we can identify our own packet
-			PacketPlayOutMetadataFieldResolver.resolve("b").set(packetMetadata, list);
+			Object packetMetadata;
+			if (MinecraftVersion.VERSION.newerThan(Minecraft.Version.v1_17_R1)) {
+				packetMetadata = PacketPlayOutMetadataResolver.resolve(new Class[] { int.class, DataWatcher, boolean.class }).newInstance(-entity.getEntityId(), dataWatcher, true);
+
+				List dataWatcherList = (List) PacketPlayOutMetadataFieldResolver.resolve("b").get(packetMetadata);
+				dataWatcherList.clear();
+				dataWatcherList.addAll(list);
+			} else {
+				packetMetadata = PacketPlayOutEntityMetadata.newInstance();
+				PacketPlayOutMetadataFieldResolver.resolve("a").set(packetMetadata, -entity.getEntityId());// Use the negative ID so we can identify our own packet
+				PacketPlayOutMetadataFieldResolver.resolve("b").set(packetMetadata, list);
+			}
 
 			sendPacket(packetMetadata, receiver);
 		} catch (ReflectiveOperationException e) {
@@ -344,41 +387,101 @@ public class GlowAPI implements Listener {
 	protected static void sendTeamPacket(Entity entity, Color color, boolean createNewTeam/*If true, we don't add any entities*/, boolean addEntity/*true->add the entity, false->remove the entity*/, String tagVisibility, String push, Player receiver) {
 		try {
 			if (PacketPlayOutScoreboardTeam == null) {
-				PacketPlayOutScoreboardTeam = NMS_CLASS_RESOLVER.resolve("PacketPlayOutScoreboardTeam");
+				PacketPlayOutScoreboardTeam = NMS_CLASS_RESOLVER.resolve("network.protocol.game.PacketPlayOutScoreboardTeam");
+			}
+			if (PacketScoreboardTeamResolver == null) {
+				PacketScoreboardTeamResolver = new ConstructorResolver(PacketPlayOutScoreboardTeam);
 			}
 			if (PacketScoreboardTeamFieldResolver == null) {
 				PacketScoreboardTeamFieldResolver = new FieldResolver(PacketPlayOutScoreboardTeam);
 			}
+			if (PacketPlayOutScoreboardTeam$info == null) {
+				PacketPlayOutScoreboardTeam$info = NMS_CLASS_RESOLVER.resolve("network.protocol.game.PacketPlayOutScoreboardTeam$b");
+			}
+			if (PacketScoreboardTeamInfoResolver == null) {
+				PacketScoreboardTeamInfoResolver = new ConstructorResolver(PacketPlayOutScoreboardTeam$info);
+			}
+			if (Scoreboard == null) {
+				Scoreboard = NMS_CLASS_RESOLVER.resolve("world.scores.Scoreboard");
+			}
+			if (ScoreboardResolver == null) {
+				ScoreboardResolver = new ConstructorResolver(Scoreboard);
+			}
+			if (ScoreboardTeam == null) {
+				ScoreboardTeam = NMS_CLASS_RESOLVER.resolve("world.scores.ScoreboardTeam");
+			}
+			if (ScoreboardTeamResolver == null) {
+				ScoreboardTeamResolver = new ConstructorResolver(ScoreboardTeam);
+			}
+			if (ScoreboardTeamMethodResolver == null) {
+				ScoreboardTeamMethodResolver = new MethodResolver(ScoreboardTeam);
+			}
 			if(ChatComponentTextResolver == null) {
-				ChatComponentTextResolver = new ConstructorResolver(NMS_CLASS_RESOLVER.resolve("ChatComponentText"));
+				ChatComponentTextResolver = new ConstructorResolver(NMS_CLASS_RESOLVER.resolve("network.chat.ChatComponentText"));
 			}
 
-			Object packetScoreboardTeam = PacketPlayOutScoreboardTeam.newInstance();
-			PacketScoreboardTeamFieldResolver.resolve("i").set(packetScoreboardTeam, createNewTeam ? 0 : addEntity ? 3 : 4);//Mode (0 = create, 3 = add entity, 4 = remove entity)
-			PacketScoreboardTeamFieldResolver.resolve("a").set(packetScoreboardTeam, color.getTeamName());//Name
-			PacketScoreboardTeamFieldResolver.resolve("e").set(packetScoreboardTeam, tagVisibility);//NameTag visibility
-			PacketScoreboardTeamFieldResolver.resolve("f").set(packetScoreboardTeam, push);//Team-push
+			final int mode = (createNewTeam ? 0 : addEntity ? 3 : 4); //Mode (0 = create, 3 = add entity, 4 = remove entity)
+
+			Object nms$ScoreboardTeam = null;
+			Object packetScoreboardTeam = null;
+
+			if (MinecraftVersion.VERSION.newerThan(Minecraft.Version.v1_17_R1)) {
+				if (nms$Scoreboard == null) {
+					nms$Scoreboard = ScoreboardResolver.resolveFirstConstructor().newInstance();
+				}
+				nms$ScoreboardTeam = ScoreboardTeamResolver.resolveFirstConstructor().newInstance(nms$Scoreboard, color.getTeamName());
+			} else {
+				packetScoreboardTeam = PacketPlayOutScoreboardTeam.newInstance();
+				PacketScoreboardTeamFieldResolver.resolve("i").set(packetScoreboardTeam, mode);//Mode
+				PacketScoreboardTeamFieldResolver.resolve("a").set(packetScoreboardTeam, color.getTeamName());//Name
+				PacketScoreboardTeamFieldResolver.resolve("e").set(packetScoreboardTeam, tagVisibility);//NameTag visibility
+				PacketScoreboardTeamFieldResolver.resolve("f").set(packetScoreboardTeam, push);//Team-push
+			}
 
 			if (createNewTeam) {
-				PacketScoreboardTeamFieldResolver.resolve("g").set(packetScoreboardTeam, color.packetValue);//Color -> this is what we care about
-
 				Object prefix = ChatComponentTextResolver.resolveFirstConstructor().newInstance("§" + color.colorCode);
 				Object displayName = ChatComponentTextResolver.resolveFirstConstructor().newInstance(color.getTeamName());
 				Object suffix = ChatComponentTextResolver.resolveFirstConstructor().newInstance("");
 
-				PacketScoreboardTeamFieldResolver.resolve("c").set(packetScoreboardTeam, prefix);//prefix - for some reason this controls the color, even though there's the extra color value...
-				PacketScoreboardTeamFieldResolver.resolve("b").set(packetScoreboardTeam, displayName);//Display name
-				PacketScoreboardTeamFieldResolver.resolve("d").set(packetScoreboardTeam, suffix);//suffix
-				PacketScoreboardTeamFieldResolver.resolve("j").set(packetScoreboardTeam, 0);//Options - let's just ignore them for now
-			}
+				if (MinecraftVersion.VERSION.newerThan(Minecraft.Version.v1_17_R1)) {
+					assert nms$ScoreboardTeam != null;
+					ScoreboardTeamMethodResolver.resolve("setDisplayName").invoke(nms$ScoreboardTeam, displayName);
+					ScoreboardTeamMethodResolver.resolve("setPrefix").invoke(nms$ScoreboardTeam, prefix);
+					ScoreboardTeamMethodResolver.resolve("setSuffix").invoke(nms$ScoreboardTeam, suffix);
+					ScoreboardTeamMethodResolver.resolve("setColor").invoke(nms$ScoreboardTeam, color.packetValue);
 
-			if (!createNewTeam) {
-				//Add/remove players
-				Collection<String> collection = ((Collection<String>) PacketScoreboardTeamFieldResolver.resolve("h").get(packetScoreboardTeam));
-				if (entity instanceof OfflinePlayer) {//Players still use the name...
-					collection.add(entity.getName());
+					Object packetScoreboardTeamInfo = PacketScoreboardTeamInfoResolver.resolveFirstConstructor().newInstance(nms$ScoreboardTeam);
+					packetScoreboardTeam = PacketScoreboardTeamResolver.resolve(new Class[] {String.class, int.class, Optional.class, Collection.class}).newInstance(color.getTeamName(), mode, Optional.of(packetScoreboardTeamInfo), ImmutableList.of());
 				} else {
-					collection.add(entity.getUniqueId().toString());
+					PacketScoreboardTeamFieldResolver.resolve("g").set(packetScoreboardTeam, color.packetValue);//Color -> this is what we care about
+
+					PacketScoreboardTeamFieldResolver.resolve("c").set(packetScoreboardTeam, prefix);//prefix - for some reason this controls the color, even though there's the extra color value...
+					PacketScoreboardTeamFieldResolver.resolve("b").set(packetScoreboardTeam, displayName);//Display name
+					PacketScoreboardTeamFieldResolver.resolve("d").set(packetScoreboardTeam, suffix);//suffix
+					PacketScoreboardTeamFieldResolver.resolve("j").set(packetScoreboardTeam, 0);//Options - let's just ignore them for now
+				}
+			} else {
+				/* Add/remove players */
+
+				Collection<String> entitiesList;
+				if (MinecraftVersion.VERSION.newerThan(Minecraft.Version.v1_17_R1)) {
+					if (scoreboardTeamEntityList == null) {
+						scoreboardTeamEntityList = Lists.newArrayList();
+					}
+					scoreboardTeamEntityList.clear();
+					entitiesList = scoreboardTeamEntityList;
+				} else {
+					entitiesList = ((Collection<String>) PacketScoreboardTeamFieldResolver.resolve("h").get(packetScoreboardTeam));
+				}
+
+				if (entity instanceof OfflinePlayer) {//Players still use the name...
+					entitiesList.add(entity.getName());
+				} else {
+					entitiesList.add(entity.getUniqueId().toString());
+				}
+
+				if (MinecraftVersion.VERSION.newerThan(Minecraft.Version.v1_17_R1)) {
+					packetScoreboardTeam = PacketScoreboardTeamResolver.resolve(new Class[]{String.class, int.class, Optional.class, Collection.class}).newInstance(color.getTeamName(), mode, Optional.empty(), entitiesList);
 				}
 			}
 
@@ -390,15 +493,22 @@ public class GlowAPI implements Listener {
 
 	protected static void sendPacket(Object packet, Player p) throws IllegalArgumentException, IllegalAccessException, InvocationTargetException, ClassNotFoundException, NoSuchFieldException, NoSuchMethodException {
 		if (EntityPlayerFieldResolver == null) {
-			EntityPlayerFieldResolver = new FieldResolver(NMS_CLASS_RESOLVER.resolve("EntityPlayer"));
+			EntityPlayerFieldResolver = new FieldResolver(NMS_CLASS_RESOLVER.resolve("server.level.EntityPlayer"));
 		}
 		if (PlayerConnectionMethodResolver == null) {
-			PlayerConnectionMethodResolver = new MethodResolver(NMS_CLASS_RESOLVER.resolve("PlayerConnection"));
+			PlayerConnectionMethodResolver = new MethodResolver(NMS_CLASS_RESOLVER.resolve("server.network.PlayerConnection"));
 		}
 
 		try {
 			Object handle = Minecraft.getHandle(p);
-			final Object connection = EntityPlayerFieldResolver.resolve("playerConnection").get(handle);
+			final Object connection;
+
+			if (MinecraftVersion.VERSION.newerThan(Minecraft.Version.v1_17_R1)) { // even playerConnection got changed!
+				connection = EntityPlayerFieldResolver.resolve("b").get(handle);
+			} else {
+				connection = EntityPlayerFieldResolver.resolve("playerConnection").get(handle);
+			}
+
 			PlayerConnectionMethodResolver.resolve("sendPacket").invoke(connection, packet);
 		} catch (ReflectiveOperationException e) {
 			throw new RuntimeException(e);
@@ -530,10 +640,13 @@ public class GlowAPI implements Listener {
 	protected static NMSClassResolver nmsClassResolver = new NMSClassResolver();
 	protected static OBCClassResolver obcClassResolver = new OBCClassResolver();
 
+	private static Class<?> LevelEntityGetter;
+
 	private static FieldResolver  CraftWorldFieldResolver;
 	private static FieldResolver  WorldFieldResolver;
 	private static FieldResolver  WorldServerFieldResolver;
 	private static MethodResolver IntHashMapMethodResolver;
+	private static MethodResolver LevelEntityGetterMethodResolver;
 
 	public static Entity getEntityById(World world, int entityId) {
 		try {
@@ -541,13 +654,19 @@ public class GlowAPI implements Listener {
 				CraftWorldFieldResolver = new FieldResolver(obcClassResolver.resolve("CraftWorld"));
 			}
 			if (WorldFieldResolver == null) {
-				WorldFieldResolver = new FieldResolver(nmsClassResolver.resolve("World"));
+				WorldFieldResolver = new FieldResolver(nmsClassResolver.resolve("world.level.World"));
 			}
 			if (WorldServerFieldResolver == null) {
-				WorldServerFieldResolver = new FieldResolver(nmsClassResolver.resolve("WorldServer"));
+				WorldServerFieldResolver = new FieldResolver(nmsClassResolver.resolve("server.level.WorldServer"));
 			}
 			if (EntityMethodResolver == null) {
-				EntityMethodResolver = new MethodResolver(nmsClassResolver.resolve("Entity"));
+				EntityMethodResolver = new MethodResolver(nmsClassResolver.resolve("world.entity.Entity"));
+			}
+			if (LevelEntityGetter == null) {
+				LevelEntityGetter = nmsClassResolver.resolve("world.level.entity.LevelEntityGetter");
+			}
+			if (LevelEntityGetterMethodResolver == null) {
+				LevelEntityGetterMethodResolver = new MethodResolver(LevelEntityGetter);
 			}
 
 			Object nmsWorld = CraftWorldFieldResolver.resolve("world").get(world);
@@ -556,8 +675,12 @@ public class GlowAPI implements Listener {
 			if (MinecraftVersion.VERSION.newerThan(Minecraft.Version.v1_8_R1)
 					&& MinecraftVersion.VERSION.olderThan(Minecraft.Version.v1_14_R1)) { /* seriously?! between 1.8 and 1.14 entitiesyId was moved to World */
 				entitiesById = WorldFieldResolver.resolve("entitiesById").get(nmsWorld);
-			} else {
+			} else if (MinecraftVersion.VERSION.olderThan(Minecraft.Version.v1_17_R1)) { /* another change!! between 1.15 and 1.16.5... seriously?! */
 				entitiesById = WorldServerFieldResolver.resolve("entitiesById").get(nmsWorld);
+			} else {
+				// calls `WorldServer#getEntities()` to get the LevelEntityGetter (nvm it has AsyncCatcher)
+				Object persistentManager = WorldServerFieldResolver.resolve("G").get(nmsWorld);
+				entitiesById = persistentManager.getClass().getMethod("d").invoke(persistentManager);
 			}
 
 			Object entity;
@@ -567,8 +690,11 @@ public class GlowAPI implements Listener {
 				}
 
 				entity = IntHashMapMethodResolver.resolve(new ResolverQuery("get", int.class)).invoke(entitiesById, entityId);
-			} else {// > 1.14 uses Int2ObjectMap which implements Map
+			} else if (MinecraftVersion.VERSION.olderThan(Minecraft.Version.v1_17_R1)) {// > 1.14 && < 1.17 uses Int2ObjectMap which implements Map
 				entity = ((Map) entitiesById).get(entityId);
+			} else { /* sighs */
+				// calls `LevelEntityGetter#a(int)` to get an entity by id
+				entity = LevelEntityGetterMethodResolver.resolve(new ResolverQuery("a", int.class)).invoke(entitiesById, entityId);
 			}
 			if (entity == null) { return null; }
 			return (Entity) EntityMethodResolver.resolve("getBukkitEntity").invoke(entity);
