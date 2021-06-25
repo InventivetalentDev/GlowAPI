@@ -53,6 +53,9 @@ public class GlowAPI implements Listener {
 	private static MethodResolver EntityMethodResolver;
 
 	//Scoreboard
+	private static Object nms$Scoreboard;
+	private static ArrayList<String> scoreboardTeamEntityList;
+
 	private static Class<?> Scoreboard; // >= 1.17
 	private static Class<?> ScoreboardTeam; // >= 1.17
 	private static Class<?> PacketPlayOutScoreboardTeam;
@@ -419,12 +422,13 @@ public class GlowAPI implements Listener {
 
 			final int mode = (createNewTeam ? 0 : addEntity ? 3 : 4); //Mode (0 = create, 3 = add entity, 4 = remove entity)
 
-			Object nms$Scoreboard;
 			Object nms$ScoreboardTeam = null;
 			Object packetScoreboardTeam = null;
 
 			if (MinecraftVersion.VERSION.newerThan(Minecraft.Version.v1_17_R1)) {
-				nms$Scoreboard = ScoreboardResolver.resolveFirstConstructor().newInstance();
+				if (nms$Scoreboard == null) {
+					nms$Scoreboard = ScoreboardResolver.resolveFirstConstructor().newInstance();
+				}
 				nms$ScoreboardTeam = ScoreboardTeamResolver.resolveFirstConstructor().newInstance(nms$Scoreboard, color.getTeamName());
 			} else {
 				packetScoreboardTeam = PacketPlayOutScoreboardTeam.newInstance();
@@ -461,7 +465,11 @@ public class GlowAPI implements Listener {
 
 				Collection<String> entitiesList;
 				if (MinecraftVersion.VERSION.newerThan(Minecraft.Version.v1_17_R1)) {
-					entitiesList = Lists.newArrayList();
+					if (scoreboardTeamEntityList == null) {
+						scoreboardTeamEntityList = Lists.newArrayList();
+					}
+					scoreboardTeamEntityList.clear();
+					entitiesList = scoreboardTeamEntityList;
 				} else {
 					entitiesList = ((Collection<String>) PacketScoreboardTeamFieldResolver.resolve("h").get(packetScoreboardTeam));
 				}
