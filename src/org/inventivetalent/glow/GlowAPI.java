@@ -395,12 +395,6 @@ public class GlowAPI implements Listener {
 			if (PacketScoreboardTeamFieldResolver == null) {
 				PacketScoreboardTeamFieldResolver = new FieldResolver(PacketPlayOutScoreboardTeam);
 			}
-			if (PacketPlayOutScoreboardTeam$info == null) {
-				PacketPlayOutScoreboardTeam$info = NMS_CLASS_RESOLVER.resolve("network.protocol.game.PacketPlayOutScoreboardTeam$b");
-			}
-			if (PacketScoreboardTeamInfoResolver == null) {
-				PacketScoreboardTeamInfoResolver = new ConstructorResolver(PacketPlayOutScoreboardTeam$info);
-			}
 			if (Scoreboard == null) {
 				Scoreboard = NMS_CLASS_RESOLVER.resolve("world.scores.Scoreboard");
 			}
@@ -444,7 +438,13 @@ public class GlowAPI implements Listener {
 				Object suffix = ChatComponentTextResolver.resolveFirstConstructor().newInstance("");
 
 				if (MinecraftVersion.VERSION.newerThan(Minecraft.Version.v1_17_R1)) {
-					assert nms$ScoreboardTeam != null;
+					if (PacketPlayOutScoreboardTeam$info == null) {
+						PacketPlayOutScoreboardTeam$info = NMS_CLASS_RESOLVER.resolve("network.protocol.game.PacketPlayOutScoreboardTeam$b");
+					}
+					if (PacketScoreboardTeamInfoResolver == null) {
+						PacketScoreboardTeamInfoResolver = new ConstructorResolver(PacketPlayOutScoreboardTeam$info);
+					}
+					
 					ScoreboardTeamMethodResolver.resolve("setDisplayName").invoke(nms$ScoreboardTeam, displayName);
 					ScoreboardTeamMethodResolver.resolve("setPrefix").invoke(nms$ScoreboardTeam, prefix);
 					ScoreboardTeamMethodResolver.resolve("setSuffix").invoke(nms$ScoreboardTeam, suffix);
