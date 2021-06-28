@@ -661,12 +661,6 @@ public class GlowAPI implements Listener {
             if (EntityMethodResolver == null) {
                 EntityMethodResolver = new MethodResolver(nmsClassResolver.resolve("world.entity.Entity"));
             }
-            if (LevelEntityGetter == null) {
-                LevelEntityGetter = nmsClassResolver.resolve("world.level.entity.LevelEntityGetter");
-            }
-            if (LevelEntityGetterMethodResolver == null) {
-                LevelEntityGetterMethodResolver = new MethodResolver(LevelEntityGetter);
-            }
 
             Object nmsWorld = CraftWorldFieldResolver.resolve("world").get(world);
             Object entitiesById;
@@ -692,6 +686,13 @@ public class GlowAPI implements Listener {
             } else if (MinecraftVersion.VERSION.olderThan(Minecraft.Version.v1_17_R1)) {// > 1.14 && < 1.17 uses Int2ObjectMap which implements Map
                 entity = ((Map) entitiesById).get(entityId);
             } else { /* sighs */
+                if (LevelEntityGetter == null) {
+                    LevelEntityGetter = nmsClassResolver.resolve("world.level.entity.LevelEntityGetter");
+                }
+                if (LevelEntityGetterMethodResolver == null) {
+                    LevelEntityGetterMethodResolver = new MethodResolver(LevelEntityGetter);
+                }
+
                 // calls `LevelEntityGetter#a(int)` to get an entity by id
                 entity = LevelEntityGetterMethodResolver.resolve(new ResolverQuery("a", int.class)).invoke(entitiesById, entityId);
             }
