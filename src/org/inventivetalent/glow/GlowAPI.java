@@ -439,12 +439,12 @@ public class GlowAPI implements Listener {
 
 				if (MinecraftVersion.VERSION.newerThan(Minecraft.Version.v1_17_R1)) {
 					if (PacketPlayOutScoreboardTeam$info == null) {
-						PacketPlayOutScoreboardTeam$info = NMS_CLASS_RESOLVER.resolve("network.protocol.game.PacketPlayOutScoreboardTeam$b");
+						PacketPlayOutScoreboardTeam$info = NMS_CLASS_RESOLVER.resolve("network.protocol.game.PacketPlayOutScoreboardTeam$b", "network.protocol.game.PacketPlayOutScoreboardTeam$Parameters");
 					}
 					if (PacketScoreboardTeamInfoResolver == null) {
 						PacketScoreboardTeamInfoResolver = new ConstructorResolver(PacketPlayOutScoreboardTeam$info);
 					}
-					
+
 					ScoreboardTeamMethodResolver.resolve("setDisplayName").invoke(nms$ScoreboardTeam, displayName);
 					ScoreboardTeamMethodResolver.resolve("setPrefix").invoke(nms$ScoreboardTeam, prefix);
 					ScoreboardTeamMethodResolver.resolve("setSuffix").invoke(nms$ScoreboardTeam, suffix);
