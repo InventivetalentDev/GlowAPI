@@ -317,25 +317,14 @@ public class GlowAPI implements Listener {
             //Existing values
             Object dataWatcher = EntityMethodResolver.resolve("getDataWatcher").invoke(Minecraft.getHandle(entity));
             Class dataWatcherItemsType;
-            if (MinecraftVersion.VERSION.olderThan(Minecraft.Version.v1_14_R1)) {
-                dataWatcherItemsType = Map.class;
-            } else if (MinecraftVersion.VERSION.olderThan(Minecraft.Version.v1_17_R1)) {
-                if (isPaper) {
-                    dataWatcherItemsType = Class.forName("it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap");
-                } else {
-                    dataWatcherItemsType = Class.forName("org.bukkit.craftbukkit.libs.it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap");
-                }
-            } else { // >= 1.17
-                if (isPaper) {
-                    dataWatcherItemsType = Class.forName("it.unimi.dsi.fastutil.ints.Int2ObjectMap");
-                } else {
-                    dataWatcherItemsType = Class.forName("org.bukkit.craftbukkit.libs.it.unimi.dsi.fastutil.ints.Int2ObjectMap");
-                }
+            if (isPaper) {
+                dataWatcherItemsType = Class.forName("it.unimi.dsi.fastutil.ints.Int2ObjectMap");
+            } else {
+                dataWatcherItemsType = Class.forName("org.bukkit.craftbukkit.libs.it.unimi.dsi.fastutil.ints.Int2ObjectMap");
             }
             Map<Integer, Object> dataWatcherItems = (Map<Integer, Object>) DataWatcherFieldResolver.resolveByLastType(dataWatcherItemsType).get(dataWatcher);
 
-            //			Object dataWatcherObject = EntityFieldResolver.resolve("ax").get(null);//Byte-DataWatcherObject
-            Object dataWatcherObject = org.inventivetalent.reflection.minecraft.DataWatcher.V1_9.ValueType.ENTITY_FLAG.getType();
+            Object dataWatcherObject = org.inventivetalent.reflection.minecraft.DataWatcher.V1_9.ValueType.ENTITY_SHARED_FLAGS.getType();
             byte prev = (byte) (dataWatcherItems.isEmpty() ? 0 : DataWatcherItemMethodResolver.resolve("b").invoke(dataWatcherItems.get(0)));
             byte b = (byte) (glowing ? (prev | 1 << 6) : (prev & ~(1 << 6)));//6 = glowing index
             Object dataWatcherItem = DataWatcherItemConstructorResolver.resolveFirstConstructor().newInstance(dataWatcherObject, b);
@@ -343,18 +332,12 @@ public class GlowAPI implements Listener {
             //The glowing item
             list.add(dataWatcherItem);
 
-            Object packetMetadata;
-            if (MinecraftVersion.VERSION.newerThan(Minecraft.Version.v1_17_R1)) {
-                packetMetadata = PacketPlayOutMetadataResolver.resolve(new Class[]{int.class, DataWatcher, boolean.class}).newInstance(-entity.getEntityId(), dataWatcher, true);
-
-                List dataWatcherList = (List) PacketPlayOutMetadataFieldResolver.resolve("b").get(packetMetadata);
-                dataWatcherList.clear();
-                dataWatcherList.addAll(list);
-            } else {
-                packetMetadata = PacketPlayOutEntityMetadata.newInstance();
-                PacketPlayOutMetadataFieldResolver.resolve("a").set(packetMetadata, -entity.getEntityId());// Use the negative ID so we can identify our own packet
-                PacketPlayOutMetadataFieldResolver.resolve("b").set(packetMetadata, list);
-            }
+            Object packetMetadata = PacketPlayOutMetadataResolver
+                    .resolve(new Class[]{int.class, DataWatcher, boolean.class})
+                    .newInstance(-entity.getEntityId(), dataWatcher, true);
+            List dataWatcherList = (List) PacketPlayOutMetadataFieldResolver.resolve("b").get(packetMetadata);
+            dataWatcherList.clear();
+            dataWatcherList.addAll(list);
 
             sendPacket(packetMetadata, receiver);
         } catch (ReflectiveOperationException e) {
