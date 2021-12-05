@@ -8,6 +8,9 @@
     <artifactId>glowapi</artifactId>
     <version>1.5.1-SNAPSHOT</version>
     <name>GlowAPI</name>
+    <properties>
+        <java.version>17</java.version>
+    </properties>
 
     <build>
         <finalName>GlowAPI_v${project.version}</finalName>
