@@ -92,7 +92,7 @@
         <dependency>
             <groupId>org.inventivetalent.packetlistenerapi</groupId>
             <artifactId>api</artifactId>
-            <version>3.9.8-SNAPSHOT</version>
+            <version>3.9.9-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>org.inventivetalent</groupId>
