@@ -109,15 +109,15 @@ public class GlowAPI implements Listener {
      * @param receiver      {@link Player} that will see the update
      */
     public static void setGlowing(Entity entity, Color color, String tagVisibility, String push, Player receiver) {
-        if (receiver == null) { return; }
+        if (receiver == null) {return;}
 
         boolean glowing = color != null;
-        if (entity == null) { glowing = false; }
-        if (entity instanceof OfflinePlayer) { if (!((OfflinePlayer) entity).isOnline()) { glowing = false; } }
+        if (entity == null) {glowing = false;}
+        if (entity instanceof OfflinePlayer) {if (!((OfflinePlayer) entity).isOnline()) {glowing = false;}}
 
         boolean wasGlowing = dataMap.containsKey(entity != null ? entity.getUniqueId() : null);
         GlowData glowData;
-        if (wasGlowing && entity != null) { glowData = dataMap.get(entity.getUniqueId()); } else { glowData = new GlowData(); }
+        if (wasGlowing && entity != null) {glowData = dataMap.get(entity.getUniqueId());} else {glowData = new GlowData();}
 
         Color oldColor = wasGlowing ? glowData.colorMap.get(receiver.getUniqueId()) : null;
 
@@ -134,10 +134,10 @@ public class GlowAPI implements Listener {
             }
         }
 
-        if (color != null && oldColor == color) { return; }
-        if (entity == null) { return; }
-        if (entity instanceof OfflinePlayer) { if (!((OfflinePlayer) entity).isOnline()) { return; } }
-        if (!receiver.isOnline()) { return; }
+        if (color != null && oldColor == color) {return;}
+        if (entity == null) {return;}
+        if (entity instanceof OfflinePlayer) {if (!((OfflinePlayer) entity).isOnline()) {return;}}
+        if (!receiver.isOnline()) {return;}
 
         sendGlowPacket(entity, wasGlowing, glowing, receiver);
         if (oldColor != null && oldColor != Color.NONE/*We never add to NONE, so no need to remove*/) {
@@ -254,7 +254,7 @@ public class GlowAPI implements Listener {
             return glowing;
         } else {
             for (Player receiver : receivers) {
-                if (isGlowing(entity, receiver)) { return true; }
+                if (isGlowing(entity, receiver)) {return true;}
             }
         }
         return false;
@@ -268,7 +268,7 @@ public class GlowAPI implements Listener {
      * @return the {@link org.inventivetalent.glow.GlowAPI.Color}, or <code>null</code> if the entity doesn't appear glowing to the player
      */
     public static Color getGlowColor(Entity entity, Player receiver) {
-        if (!dataMap.containsKey(entity.getUniqueId())) { return null; }
+        if (!dataMap.containsKey(entity.getUniqueId())) {return null;}
         GlowData data = dataMap.get(entity.getUniqueId());
         return data.colorMap.get(receiver.getUniqueId());
     }
@@ -315,7 +315,7 @@ public class GlowAPI implements Listener {
             List list = new ArrayList();
 
             //Existing values
-            Object dataWatcher = EntityMethodResolver.resolve("getDataWatcher").invoke(Minecraft.getHandle(entity));
+            Object dataWatcher = EntityMethodResolver.resolve("getDataWatcher", "ai").invoke(Minecraft.getHandle(entity));
             Class dataWatcherItemsType;
             if (isPaper) {
                 dataWatcherItemsType = Class.forName("it.unimi.dsi.fastutil.ints.Int2ObjectMap");
@@ -428,10 +428,22 @@ public class GlowAPI implements Listener {
                         PacketScoreboardTeamInfoResolver = new ConstructorResolver(PacketPlayOutScoreboardTeam$info);
                     }
 
-                    ScoreboardTeamMethodResolver.resolve("setDisplayName").invoke(nms$ScoreboardTeam, displayName);
-                    ScoreboardTeamMethodResolver.resolve("setPrefix").invoke(nms$ScoreboardTeam, prefix);
-                    ScoreboardTeamMethodResolver.resolve("setSuffix").invoke(nms$ScoreboardTeam, suffix);
-                    ScoreboardTeamMethodResolver.resolve("setColor").invoke(nms$ScoreboardTeam, color.packetValue);
+                    ScoreboardTeamMethodResolver.resolve(new ResolverQuery[]{
+                            new ResolverQuery("setDisplayName"),
+                            new ResolverQuery("a", NMS_CLASS_RESOLVER.resolve("network.chat.IChatBaseComponent")),
+                    }).invoke(nms$ScoreboardTeam, displayName);
+                    ScoreboardTeamMethodResolver.resolve(new ResolverQuery[]{
+                            new ResolverQuery("setPrefix"),
+                            new ResolverQuery("b", NMS_CLASS_RESOLVER.resolve("network.chat.IChatBaseComponent")),
+                    }).invoke(nms$ScoreboardTeam, prefix);
+                    ScoreboardTeamMethodResolver.resolve(new ResolverQuery[]{
+                            new ResolverQuery("setSuffix"),
+                            new ResolverQuery("c", NMS_CLASS_RESOLVER.resolve("network.chat.IChatBaseComponent")),
+                    }).invoke(nms$ScoreboardTeam, suffix);
+                    ScoreboardTeamMethodResolver.resolve(new ResolverQuery[]{
+                            new ResolverQuery("setColor"),
+                            new ResolverQuery("a", NMS_CLASS_RESOLVER.resolve("EnumChatFormat")),
+                    }).invoke(nms$ScoreboardTeam, color.packetValue);
 
                     Object packetScoreboardTeamInfo = PacketScoreboardTeamInfoResolver.resolveFirstConstructor().newInstance(nms$ScoreboardTeam);
                     packetScoreboardTeam = PacketScoreboardTeamResolver.resolve(new Class[]{String.class, int.class, Optional.class, Collection.class}).newInstance(color.getTeamName(), mode, Optional.of(packetScoreboardTeamInfo), ImmutableList.of());
@@ -492,7 +504,10 @@ public class GlowAPI implements Listener {
                 connection = EntityPlayerFieldResolver.resolve("playerConnection").get(handle);
             }
 
-            PlayerConnectionMethodResolver.resolve("sendPacket").invoke(connection, packet);
+            PlayerConnectionMethodResolver.resolve(new ResolverQuery[]{
+                    new ResolverQuery("sendPacket"),
+                    new ResolverQuery("a", NMS_CLASS_RESOLVER.resolve("network.protocol.Packet"))
+            }).invoke(connection, packet);
         } catch (ReflectiveOperationException e) {
             throw new RuntimeException(e);
         }
@@ -568,33 +583,35 @@ public class GlowAPI implements Listener {
                         return;//Nothing to modify
                     }
 
-                    Entity entity = getEntityById(sentPacket.getPlayer().getWorld(), a);
-                    if (entity != null) {
-                        //Check if the entity is glowing
-                        if (GlowAPI.isGlowing(entity, sentPacket.getPlayer())) {
-                            if (GlowAPI.DataWatcherItemMethodResolver == null) {
-                                GlowAPI.DataWatcherItemMethodResolver = new MethodResolver(GlowAPI.DataWatcherItem);
-                            }
-                            if (GlowAPI.DataWatcherItemFieldResolver == null) {
-                                GlowAPI.DataWatcherItemFieldResolver = new FieldResolver(GlowAPI.DataWatcherItem);
-                            }
-
-                            try {
-                                //Update the DataWatcher Item
-                                //								Object prevItem = b.get(0);
-                                for (Object prevItem : b) {
-                                    Object prevObj = GlowAPI.DataWatcherItemMethodResolver.resolve("b").invoke(prevItem);
-                                    if (prevObj instanceof Byte) {
-                                        byte prev = (byte) prevObj;
-                                        byte bte = (byte) (true/*Maybe use the isGlowing result*/ ? (prev | 1 << 6) : (prev & ~(1 << 6)));//6 = glowing index
-                                        GlowAPI.DataWatcherItemFieldResolver.resolve("b").set(prevItem, bte);
-                                    }
+                    Bukkit.getScheduler().runTask(plugin, () -> {
+                        Entity entity = getEntityById(sentPacket.getPlayer().getWorld(), a);
+                        if (entity != null) {
+                            //Check if the entity is glowing
+                            if (GlowAPI.isGlowing(entity, sentPacket.getPlayer())) {
+                                if (GlowAPI.DataWatcherItemMethodResolver == null) {
+                                    GlowAPI.DataWatcherItemMethodResolver = new MethodResolver(GlowAPI.DataWatcherItem);
                                 }
-                            } catch (Exception e) {
-                                throw new RuntimeException(e);
+                                if (GlowAPI.DataWatcherItemFieldResolver == null) {
+                                    GlowAPI.DataWatcherItemFieldResolver = new FieldResolver(GlowAPI.DataWatcherItem);
+                                }
+
+                                try {
+                                    //Update the DataWatcher Item
+                                    //								Object prevItem = b.get(0);
+                                    for (Object prevItem : b) {
+                                        Object prevObj = GlowAPI.DataWatcherItemMethodResolver.resolve("b").invoke(prevItem);
+                                        if (prevObj instanceof Byte) {
+                                            byte prev = (byte) prevObj;
+                                            byte bte = (byte) (true/*Maybe use the isGlowing result*/ ? (prev | 1 << 6) : (prev & ~(1 << 6)));//6 = glowing index
+                                            GlowAPI.DataWatcherItemFieldResolver.resolve("b").set(prevItem, bte);
+                                        }
+                                    }
+                                } catch (Exception e) {
+                                    throw new RuntimeException(e);
+                                }
                             }
                         }
-                    }
+                    });
                 }
             }
 
@@ -629,6 +646,7 @@ public class GlowAPI implements Listener {
     private static FieldResolver WorldServerFieldResolver;
     private static MethodResolver IntHashMapMethodResolver;
     private static MethodResolver LevelEntityGetterMethodResolver;
+    private static MethodResolver WorldServerMethodResolver;
 
     public static Entity getEntityById(World world, int entityId) {
         try {
@@ -644,42 +662,39 @@ public class GlowAPI implements Listener {
             if (EntityMethodResolver == null) {
                 EntityMethodResolver = new MethodResolver(nmsClassResolver.resolve("world.entity.Entity"));
             }
+            if (WorldServerMethodResolver == null) {
+                WorldServerMethodResolver = new MethodResolver(nmsClassResolver.resolve("server.level.WorldServer"));
+            }
 
             Object nmsWorld = CraftWorldFieldResolver.resolve("world").get(world);
-            Object entitiesById;
-            // NOTE: this check can be false, if the v1_14_R1 doesn't exist (stupid java), i.e. in old ReflectionHelper versions
-            if (MinecraftVersion.VERSION.newerThan(Minecraft.Version.v1_8_R1)
-                    && MinecraftVersion.VERSION.olderThan(Minecraft.Version.v1_14_R1)) { /* seriously?! between 1.8 and 1.14 entitiesyId was moved to World */
-                entitiesById = WorldFieldResolver.resolve("entitiesById").get(nmsWorld);
-            } else if (MinecraftVersion.VERSION.olderThan(Minecraft.Version.v1_17_R1)) { /* another change!! between 1.15 and 1.16.5... seriously?! */
-                entitiesById = WorldServerFieldResolver.resolve("entitiesById").get(nmsWorld);
-            } else {
-                // calls `WorldServer#getEntities()` to get the LevelEntityGetter (nvm it has AsyncCatcher)
-                Object persistentManager = WorldServerFieldResolver.resolve("G").get(nmsWorld);
-                entitiesById = persistentManager.getClass().getMethod("d").invoke(persistentManager);
-            }
-
             Object entity;
-            if (MinecraftVersion.VERSION.olderThan(Minecraft.Version.v1_14_R1)) {// < 1.14 uses IntHashMap
-                if (IntHashMapMethodResolver == null) {
-                    IntHashMapMethodResolver = new MethodResolver(nmsClassResolver.resolve("IntHashMap"));
+            if (MinecraftVersion.VERSION.newerThan(Minecraft.Version.v1_17_R1)) {
+                // no more entitiesById in 1.17+
+                entity = WorldServerMethodResolver.resolve(new ResolverQuery[]{
+                        new ResolverQuery("getEntity", int.class),
+                        new ResolverQuery("a", int.class)
+                }).invoke(nmsWorld, entityId);
+            } else {
+                Object entitiesById;
+                // NOTE: this check can be false, if the v1_14_R1 doesn't exist (stupid java), i.e. in old ReflectionHelper versions
+                if (MinecraftVersion.VERSION.newerThan(Minecraft.Version.v1_8_R1)
+                        && MinecraftVersion.VERSION.olderThan(Minecraft.Version.v1_14_R1)) { /* seriously?! between 1.8 and 1.14 entitiesyId was moved to World */
+                    entitiesById = WorldFieldResolver.resolveAccessor("entitiesById").get(nmsWorld);
+                } else {
+                    entitiesById = WorldServerFieldResolver.resolveAccessor("entitiesById").get(nmsWorld);
                 }
 
-                entity = IntHashMapMethodResolver.resolve(new ResolverQuery("get", int.class)).invoke(entitiesById, entityId);
-            } else if (MinecraftVersion.VERSION.olderThan(Minecraft.Version.v1_17_R1)) {// > 1.14 && < 1.17 uses Int2ObjectMap which implements Map
-                entity = ((Map) entitiesById).get(entityId);
-            } else { /* sighs */
-                if (LevelEntityGetter == null) {
-                    LevelEntityGetter = nmsClassResolver.resolve("world.level.entity.LevelEntityGetter");
-                }
-                if (LevelEntityGetterMethodResolver == null) {
-                    LevelEntityGetterMethodResolver = new MethodResolver(LevelEntityGetter);
-                }
+                if (MinecraftVersion.VERSION.olderThan(Minecraft.Version.v1_14_R1)) {// < 1.14 uses IntHashMap
+                    if (IntHashMapMethodResolver == null) {
+                        IntHashMapMethodResolver = new MethodResolver(NMS_CLASS_RESOLVER.resolve("IntHashMap"));
+                    }
 
-                // calls `LevelEntityGetter#a(int)` to get an entity by id
-                entity = LevelEntityGetterMethodResolver.resolve(new ResolverQuery("a", int.class)).invoke(entitiesById, entityId);
+                    entity = IntHashMapMethodResolver.resolve(new ResolverQuery("get", int.class)).invoke(entitiesById, entityId);
+                } else {// > 1.14 uses Int2ObjectMap which implements Map
+                    entity = ((Map) entitiesById).get(entityId);
+                }
             }
-            if (entity == null) { return null; }
+            if (entity == null) {return null;}
             return (Entity) EntityMethodResolver.resolve("getBukkitEntity").invoke(entity);
         } catch (Exception e) {
             throw new RuntimeException(e);
