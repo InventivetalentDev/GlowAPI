@@ -6,6 +6,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.World;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.ItemFrame;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -668,7 +669,12 @@ public class GlowAPI implements Listener {
 
             Object nmsWorld = CraftWorldFieldResolver.resolve("world").get(world);
             Object entity;
-            if (MinecraftVersion.VERSION.newerThan(Minecraft.Version.v1_17_R1)) {
+            if (MinecraftVersion.VERSION.newerThan(Minecraft.Version.v1_18_R1)) {
+                entity = world.getEntitiesByClass(ItemFrame.class).stream().filter(i -> i.getEntityId() == entityId).findFirst().orElse(null);
+                if (entity != null) {
+                    entity = Minecraft.getHandle(entity);
+                }
+            } else if (MinecraftVersion.VERSION.newerThan(Minecraft.Version.v1_17_R1)) {
                 // no more entitiesById in 1.17+
                 entity = WorldServerMethodResolver.resolve(new ResolverQuery[]{
                         new ResolverQuery("getEntity", int.class),
