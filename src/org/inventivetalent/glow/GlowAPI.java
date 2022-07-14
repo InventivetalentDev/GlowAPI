@@ -27,6 +27,7 @@ import org.inventivetalent.reflection.resolver.minecraft.NMSClassResolver;
 import org.inventivetalent.reflection.resolver.minecraft.OBCClassResolver;
 
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.*;
 
 public class GlowAPI implements Listener {
@@ -74,6 +75,7 @@ public class GlowAPI implements Listener {
 
     private static ConstructorResolver ChatComponentTextResolver;
     private static MethodResolver EnumChatFormatResolver;
+    private static MethodResolver IChatBaseComponentMethodResolver;
 
     //Packets
     private static FieldResolver EntityPlayerFieldResolver;
@@ -394,8 +396,11 @@ public class GlowAPI implements Listener {
             if (ScoreboardTeamMethodResolver == null) {
                 ScoreboardTeamMethodResolver = new MethodResolver(ScoreboardTeam);
             }
-            if (ChatComponentTextResolver == null) {
+            if (ChatComponentTextResolver == null && MinecraftVersion.VERSION.olderThan(Minecraft.Version.v1_19_R1)) {
                 ChatComponentTextResolver = new ConstructorResolver(NMS_CLASS_RESOLVER.resolve("network.chat.ChatComponentText"));
+            }
+            if (IChatBaseComponentMethodResolver == null && MinecraftVersion.VERSION.newerThan(Minecraft.Version.v1_19_R1)) {
+                IChatBaseComponentMethodResolver = new MethodResolver(NMS_CLASS_RESOLVER.resolve("network.chat.IChatBaseComponent"));
             }
 
             final int mode = (createNewTeam ? 0 : addEntity ? 3 : 4); //Mode (0 = create, 3 = add entity, 4 = remove entity)
@@ -417,9 +422,20 @@ public class GlowAPI implements Listener {
             }
 
             if (createNewTeam) {
-                Object prefix = ChatComponentTextResolver.resolveFirstConstructor().newInstance("§" + color.colorCode);
-                Object displayName = ChatComponentTextResolver.resolveFirstConstructor().newInstance(color.getTeamName());
-                Object suffix = ChatComponentTextResolver.resolveFirstConstructor().newInstance("");
+                Object prefix;
+                Object displayName;
+                Object suffix;
+
+                if (MinecraftVersion.VERSION.newerThan(Minecraft.Version.v1_19_R1)) {
+                    Method aMethod = IChatBaseComponentMethodResolver.resolve(new ResolverQuery("b", String.class));
+                    prefix = aMethod.invoke(null, "§" + color.colorCode);
+                    displayName = aMethod.invoke(null, color.getTeamName());
+                    suffix = aMethod.invoke(null, "");
+                } else {
+                    prefix = ChatComponentTextResolver.resolveFirstConstructor().newInstance("§" + color.colorCode);
+                    displayName = ChatComponentTextResolver.resolveFirstConstructor().newInstance(color.getTeamName());
+                    suffix = ChatComponentTextResolver.resolveFirstConstructor().newInstance("");
+                }
 
                 if (MinecraftVersion.VERSION.newerThan(Minecraft.Version.v1_17_R1)) {
                     if (PacketPlayOutScoreboardTeam$info == null) {
@@ -547,7 +563,8 @@ public class GlowAPI implements Listener {
                 }
 
                 this.packetValue = EnumChatFormatResolver.resolve(new ResolverQuery("a", int.class)).invoke(null, packetValue);
-            } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException | NoSuchMethodException | ClassNotFoundException e) {
+            } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException | NoSuchMethodException |
+                     ClassNotFoundException e) {
                 e.printStackTrace();
             }
 
