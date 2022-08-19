@@ -320,7 +320,7 @@ public class GlowAPI implements Listener {
             //Existing values
             Object dataWatcher = EntityMethodResolver.resolve("getDataWatcher", "ai").invoke(Minecraft.getHandle(entity));
             Class dataWatcherItemsType;
-            if (isPaper) {
+            if (isPaper || MinecraftVersion.VERSION.newerThan(Minecraft.Version.v1_19_R1)) {
                 dataWatcherItemsType = Class.forName("it.unimi.dsi.fastutil.ints.Int2ObjectMap");
             } else {
                 dataWatcherItemsType = Class.forName("org.bukkit.craftbukkit.libs.it.unimi.dsi.fastutil.ints.Int2ObjectMap");
