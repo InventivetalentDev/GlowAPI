@@ -29,10 +29,12 @@ import org.inventivetalent.reflection.resolver.minecraft.OBCClassResolver;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
-public class GlowAPI implements Listener {
+public class GlowAPI extends PacketHandler implements Listener {
 
     private static Map<UUID, GlowData> dataMap = new HashMap<>();
+    private final static Map<Integer, UUID> entityById = new ConcurrentHashMap<>();
 
     private static final NMSClassResolver NMS_CLASS_RESOLVER = new NMSClassResolver();
 
@@ -46,6 +48,7 @@ public class GlowAPI implements Listener {
     private static FieldResolver EntityFieldResolver;
     private static FieldResolver DataWatcherFieldResolver;
     static FieldResolver DataWatcherItemFieldResolver;
+    private static FieldResolver DataWatcherItemAccessorFieldResolver; // >= 1.19
 
     private static ConstructorResolver PacketPlayOutMetadataResolver;
     private static ConstructorResolver DataWatcherItemConstructorResolver;
@@ -126,11 +129,13 @@ public class GlowAPI implements Listener {
 
         if (glowing) {
             glowData.colorMap.put(receiver.getUniqueId(), color);
+            entityById.put(entity.getEntityId(), entity.getUniqueId());
         } else {
             glowData.colorMap.remove(receiver.getUniqueId());
         }
         if (glowData.colorMap.isEmpty()) {
             dataMap.remove(entity != null ? entity.getUniqueId() : null);
+            if (entity != null) entityById.remove(entity.getEntityId());
         } else {
             if (entity != null) {
                 dataMap.put(entity.getUniqueId(), glowData);
@@ -238,6 +243,10 @@ public class GlowAPI implements Listener {
         return getGlowColor(entity, receiver) != null;
     }
 
+    private static boolean isGlowing(UUID entity, Player receiver) {
+        return getGlowColor(entity, receiver) != null;
+    }
+
     /**
      * Checks if an entity is glowing
      *
@@ -271,8 +280,12 @@ public class GlowAPI implements Listener {
      * @return the {@link org.inventivetalent.glow.GlowAPI.Color}, or <code>null</code> if the entity doesn't appear glowing to the player
      */
     public static Color getGlowColor(Entity entity, Player receiver) {
-        if (!dataMap.containsKey(entity.getUniqueId())) {return null;}
-        GlowData data = dataMap.get(entity.getUniqueId());
+        return getGlowColor(entity.getUniqueId(), receiver);
+    }
+
+    private static Color getGlowColor(UUID entityUniqueId, Player receiver) {
+        if (!dataMap.containsKey(entityUniqueId)) {return null;}
+        GlowData data = dataMap.get(entityUniqueId);
         return data.colorMap.get(receiver.getUniqueId());
     }
 
@@ -652,6 +665,60 @@ public class GlowAPI implements Listener {
                 GlowAPI.setGlowing(event.getPlayer(), null, receiver);
             }
         }
+        entityById.remove(event.getPlayer().getEntityId());
+    }
+
+    @Override
+    public void onSend(SentPacket sentPacket) {
+        if (sentPacket.getPlayer() == null) return;
+        if (PacketPlayOutEntityMetadata == null) return;
+        if (PacketPlayOutMetadataFieldResolver == null) return;
+        if (DataWatcherItem != null && DataWatcherItemFieldResolver == null) {
+            DataWatcherItemFieldResolver = new FieldResolver(GlowAPI.DataWatcherItem);
+        }
+
+        Object rawPacket = sentPacket.getPacket();
+        if (!rawPacket.getClass().equals(PacketPlayOutEntityMetadata)) return;
+
+        try {
+            List dataWatcherItemsList = (List) PacketPlayOutMetadataFieldResolver.resolve("b").get(rawPacket);
+            if (dataWatcherItemsList.size() <= 0) return;
+
+            Object dataWatcherItem = dataWatcherItemsList.get(0);
+            if (dataWatcherItem == null) return;
+
+            Object dataWatcherItemAccessor = DataWatcherItemMethodResolver.resolve("a").invoke(dataWatcherItem);
+            if (dataWatcherItemAccessor == null) return;
+
+            if (DataWatcherItemAccessorFieldResolver == null) {
+                DataWatcherItemAccessorFieldResolver = new FieldResolver(nmsClassResolver.resolve("net.minecraft.network.syncher.DataWatcherObject"));
+            }
+
+            int id = (Integer) DataWatcherItemAccessorFieldResolver.resolve("a").get(dataWatcherItemAccessor);
+            if (id != 0) return;
+
+            int targetEntityId = (Integer) PacketPlayOutMetadataFieldResolver.resolve("a").get(rawPacket);
+            UUID entityUniqueId = entityById.get(targetEntityId);
+            if (entityUniqueId == null) return;
+
+            byte dataWatcherItemValue = (byte) DataWatcherItemMethodResolver.resolve("b").invoke(dataWatcherItem);
+
+            boolean internalGlowFlagValue = (dataWatcherItemValue & (1 << 6)) == (1 << 6);
+            boolean currentGlowFlagValue = isGlowing(entityUniqueId, sentPacket.getPlayer());
+            if (internalGlowFlagValue == currentGlowFlagValue) return;
+
+            byte newDataWatcherItemValue = (byte) (currentGlowFlagValue ? dataWatcherItemValue | (1 << 6) : dataWatcherItemValue & ~(1 << 6));
+            DataWatcherItemMethodResolver.resolve(
+                    new ResolverQuery("a", Object.class)
+            ).invoke(dataWatcherItem, newDataWatcherItemValue);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public void onReceive(ReceivedPacket receivedPacket) {
+
     }
 
     protected static NMSClassResolver nmsClassResolver = new NMSClassResolver();
