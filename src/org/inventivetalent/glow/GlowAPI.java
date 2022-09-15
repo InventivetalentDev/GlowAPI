@@ -115,11 +115,17 @@ public class GlowAPI extends PacketHandler implements Listener {
      * @param receiver      {@link Player} that will see the update
      */
     public static void setGlowing(Entity entity, Color color, String tagVisibility, String push, Player receiver) {
-        if (receiver == null) {return;}
+        if (receiver == null) return;
 
         boolean glowing = color != null;
-        if (entity == null) {glowing = false;}
-        if (entity instanceof OfflinePlayer) {if (!((OfflinePlayer) entity).isOnline()) {glowing = false;}}
+        if (entity == null) {
+            glowing = false;
+        }
+        if (entity instanceof OfflinePlayer) {
+            if (!((OfflinePlayer) entity).isOnline()) {
+                glowing = false;
+            }
+        }
 
         boolean wasGlowing = dataMap.containsKey(entity != null ? entity.getUniqueId() : null);
         GlowData glowData;
@@ -142,10 +148,12 @@ public class GlowAPI extends PacketHandler implements Listener {
             }
         }
 
-        if (color != null && oldColor == color) {return;}
-        if (entity == null) {return;}
-        if (entity instanceof OfflinePlayer) {if (!((OfflinePlayer) entity).isOnline()) {return;}}
-        if (!receiver.isOnline()) {return;}
+        if (color != null && oldColor == color) return;
+        if (entity == null) return;
+        if (entity instanceof OfflinePlayer) {
+            if (!((OfflinePlayer) entity).isOnline()) return;
+        }
+        if (!receiver.isOnline()) return;
 
         sendGlowPacket(entity, wasGlowing, glowing, receiver);
         if (oldColor != null && oldColor != Color.NONE/*We never add to NONE, so no need to remove*/) {
@@ -266,7 +274,7 @@ public class GlowAPI extends PacketHandler implements Listener {
             return glowing;
         } else {
             for (Player receiver : receivers) {
-                if (isGlowing(entity, receiver)) {return true;}
+                if (isGlowing(entity, receiver)) return true;
             }
         }
         return false;
@@ -284,7 +292,7 @@ public class GlowAPI extends PacketHandler implements Listener {
     }
 
     private static Color getGlowColor(UUID entityUniqueId, Player receiver) {
-        if (!dataMap.containsKey(entityUniqueId)) {return null;}
+        if (!dataMap.containsKey(entityUniqueId)) return null;
         GlowData data = dataMap.get(entityUniqueId);
         return data.colorMap.get(receiver.getUniqueId());
     }
@@ -731,7 +739,7 @@ public class GlowAPI extends PacketHandler implements Listener {
                     entity = ((Map) entitiesById).get(entityId);
                 }
             }
-            if (entity == null) {return null;}
+            if (entity == null) return null;
             return (Entity) EntityMethodResolver.resolve("getBukkitEntity").invoke(entity);
         } catch (Exception e) {
             throw new RuntimeException(e);
