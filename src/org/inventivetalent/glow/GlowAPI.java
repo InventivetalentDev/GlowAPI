@@ -644,7 +644,7 @@ public class GlowAPI extends PacketHandler implements Listener {
             if (dataWatcherItemAccessor == null) return;
 
             if (DataWatcherItemAccessorFieldResolver == null) {
-                DataWatcherItemAccessorFieldResolver = new FieldResolver(nmsClassResolver.resolve("net.minecraft.network.syncher.DataWatcherObject"));
+                DataWatcherItemAccessorFieldResolver = new FieldResolver(nmsClassResolver.resolve("network.syncher.DataWatcherObject"));
             }
 
             int id = (Integer) DataWatcherItemAccessorFieldResolver.resolve("a").get(dataWatcherItemAccessor);
