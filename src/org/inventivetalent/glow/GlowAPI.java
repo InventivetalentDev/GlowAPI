@@ -33,7 +33,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class GlowAPI extends PacketHandler implements Listener {
 
-    private static Map<UUID, GlowData> dataMap = new HashMap<>();
+    private static final Map<UUID, GlowData> dataMap = new HashMap<>();
     private final static Map<Integer, UUID> entityById = new ConcurrentHashMap<>();
 
     private static final NMSClassResolver NMS_CLASS_RESOLVER = new NMSClassResolver();
