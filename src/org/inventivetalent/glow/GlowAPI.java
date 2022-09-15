@@ -593,11 +593,6 @@ public class GlowAPI extends PacketHandler implements Listener {
         }
     }
 
-    //This gets called either by #initAPI above or #initAPI in one of the requiring plugins
-    public void init(Plugin plugin) {
-        Bukkit.getPluginManager().registerEvents(this, plugin);
-    }
-
     @EventHandler
     public void onJoin(final PlayerJoinEvent event) {
         //Initialize the teams
@@ -743,7 +738,8 @@ public class GlowAPI extends PacketHandler implements Listener {
         }
     }
 
-    public GlowAPI() {
+    public GlowAPI(Plugin plugin) {
+        super(plugin);
     }
 
 }

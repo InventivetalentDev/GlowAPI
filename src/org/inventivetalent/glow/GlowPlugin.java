@@ -7,44 +7,40 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.inventivetalent.packetlistener.PacketListenerAPI;
-import org.inventivetalent.reflection.minecraft.Minecraft;
 
 import java.util.Random;
 
 public class GlowPlugin extends JavaPlugin {
 
-	static GlowPlugin instance;
-	GlowAPI glowAPI = new GlowAPI();
+    static GlowPlugin instance;
+    GlowAPI glowAPI;
 
-	@Override
-	public void onLoad() {
-		instance = this;
-	}
+    @Override
+    public void onLoad() {
+        instance = this;
+        glowAPI = new GlowAPI(this);
+    }
 
-	@Override
-	public void onEnable() {
-		glowAPI.init(this);
-		if (Minecraft.MINECRAFT_VERSION.newerThan(Minecraft.Version.v1_19_R1)) {
-			PacketListenerAPI.addPacketHandler(glowAPI);
-		}
+    @Override
+    public void onEnable() {
+        Bukkit.getPluginManager().registerEvents(glowAPI, this);
+        PacketListenerAPI.addPacketHandler(glowAPI);
 
-		new MetricsLite(this, 2190);
+        new MetricsLite(this, 2190);
 
-		Bukkit.getPluginManager().registerEvents(new Listener() {
+        Bukkit.getPluginManager().registerEvents(new Listener() {
 
-			@EventHandler
-			public void on(PlayerInteractEvent event) {
-				GlowAPI.setGlowing(event.getPlayer(), GlowAPI.Color.values()[new Random().nextInt(GlowAPI.Color.values().length)], Bukkit.getOnlinePlayers());
-			}
+            @EventHandler
+            public void on(PlayerInteractEvent event) {
+                GlowAPI.setGlowing(event.getPlayer(), GlowAPI.Color.values()[new Random().nextInt(GlowAPI.Color.values().length)], Bukkit.getOnlinePlayers());
+            }
 
-		}, this);
-	}
+        }, this);
+    }
 
-	@Override
-	public void onDisable() {
-		if (Minecraft.MINECRAFT_VERSION.newerThan(Minecraft.Version.v1_19_R1)) {
-			PacketListenerAPI.removePacketHandler(glowAPI);
-		}
-	}
+    @Override
+    public void onDisable() {
+        PacketListenerAPI.removePacketHandler(glowAPI);
+    }
 
 }
