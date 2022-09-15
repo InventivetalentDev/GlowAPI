@@ -596,60 +596,6 @@ public class GlowAPI extends PacketHandler implements Listener {
     //This gets called either by #initAPI above or #initAPI in one of the requiring plugins
     public void init(Plugin plugin) {
         Bukkit.getPluginManager().registerEvents(this, plugin);
-
-        PacketHandler.addHandler(new PacketHandler(GlowPlugin.instance != null ? GlowPlugin.instance : plugin) {
-            @Override
-            @PacketOptions(forcePlayer = true)
-            public void onSend(SentPacket sentPacket) {
-                if ("PacketPlayOutEntityMetadata".equals(sentPacket.getPacketName())) {
-                    int a = (int) sentPacket.getPacketValue("a");
-                    if (a < 0) {//Our packet
-                        //Reset the ID and let it through
-                        sentPacket.setPacketValue("a", -a);
-                        return;
-                    }
-
-                    List b = (List) sentPacket.getPacketValue("b");
-                    if (b == null || b.isEmpty()) {
-                        return;//Nothing to modify
-                    }
-
-                    Bukkit.getScheduler().runTask(plugin, () -> {
-                        Entity entity = getEntityById(sentPacket.getPlayer().getWorld(), a);
-                        if (entity != null) {
-                            //Check if the entity is glowing
-                            if (GlowAPI.isGlowing(entity, sentPacket.getPlayer())) {
-                                if (GlowAPI.DataWatcherItemMethodResolver == null) {
-                                    GlowAPI.DataWatcherItemMethodResolver = new MethodResolver(GlowAPI.DataWatcherItem);
-                                }
-                                if (GlowAPI.DataWatcherItemFieldResolver == null) {
-                                    GlowAPI.DataWatcherItemFieldResolver = new FieldResolver(GlowAPI.DataWatcherItem);
-                                }
-
-                                try {
-                                    //Update the DataWatcher Item
-                                    //								Object prevItem = b.get(0);
-                                    for (Object prevItem : b) {
-                                        Object prevObj = GlowAPI.DataWatcherItemMethodResolver.resolve("b").invoke(prevItem);
-                                        if (prevObj instanceof Byte) {
-                                            byte prev = (byte) prevObj;
-                                            byte bte = (byte) (true/*Maybe use the isGlowing result*/ ? (prev | 1 << 6) : (prev & ~(1 << 6)));//6 = glowing index
-                                            GlowAPI.DataWatcherItemFieldResolver.resolve("b").set(prevItem, bte);
-                                        }
-                                    }
-                                } catch (Exception e) {
-                                    throw new RuntimeException(e);
-                                }
-                            }
-                        }
-                    });
-                }
-            }
-
-            @Override
-            public void onReceive(ReceivedPacket receivedPacket) {
-            }
-        });
     }
 
     @EventHandler
@@ -668,9 +614,10 @@ public class GlowAPI extends PacketHandler implements Listener {
         entityById.remove(event.getPlayer().getEntityId());
     }
 
+    @PacketOptions(forcePlayer = true)
     @Override
     public void onSend(SentPacket sentPacket) {
-        if (sentPacket.getPlayer() == null) return;
+        if (!"PacketPlayOutEntityMetadata".equals(sentPacket.getPacketName())) return;
         if (PacketPlayOutEntityMetadata == null) return;
         if (PacketPlayOutMetadataFieldResolver == null) return;
         if (DataWatcherItem != null && DataWatcherItemFieldResolver == null) {
@@ -678,9 +625,15 @@ public class GlowAPI extends PacketHandler implements Listener {
         }
 
         Object rawPacket = sentPacket.getPacket();
-        if (!rawPacket.getClass().equals(PacketPlayOutEntityMetadata)) return;
 
         try {
+            int a = (int) sentPacket.getPacketValue("a");
+            if (a < 0) {//Our packet
+                //Reset the ID and let it through
+                sentPacket.setPacketValue("a", -a);
+                return;
+            }
+
             List dataWatcherItemsList = (List) PacketPlayOutMetadataFieldResolver.resolve("b").get(rawPacket);
             if (dataWatcherItemsList.size() <= 0) return;
 
@@ -718,7 +671,6 @@ public class GlowAPI extends PacketHandler implements Listener {
 
     @Override
     public void onReceive(ReceivedPacket receivedPacket) {
-
     }
 
     protected static NMSClassResolver nmsClassResolver = new NMSClassResolver();
