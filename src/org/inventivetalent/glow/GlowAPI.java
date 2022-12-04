@@ -435,7 +435,7 @@ public class GlowAPI extends PacketHandler implements Listener {
                 }
                 nms$ScoreboardTeam = ScoreboardTeamResolver.resolveFirstConstructor().newInstance(nms$Scoreboard, color.getTeamName());
             } else {
-                packetScoreboardTeam = PacketPlayOutScoreboardTeam.newInstance();
+                packetScoreboardTeam = PacketPlayOutScoreboardTeam.getConstructor().newInstance();
                 PacketScoreboardTeamFieldResolver.resolve("i").set(packetScoreboardTeam, mode);//Mode
                 PacketScoreboardTeamFieldResolver.resolve("a").set(packetScoreboardTeam, color.getTeamName());//Name
                 PacketScoreboardTeamFieldResolver.resolve("e").set(packetScoreboardTeam, tagVisibility);//NameTag visibility
@@ -679,13 +679,10 @@ public class GlowAPI extends PacketHandler implements Listener {
     protected static NMSClassResolver nmsClassResolver = new NMSClassResolver();
     protected static OBCClassResolver obcClassResolver = new OBCClassResolver();
 
-    private static Class<?> LevelEntityGetter;
-
     private static FieldResolver CraftWorldFieldResolver;
     private static FieldResolver WorldFieldResolver;
     private static FieldResolver WorldServerFieldResolver;
     private static MethodResolver IntHashMapMethodResolver;
-    private static MethodResolver LevelEntityGetterMethodResolver;
     private static MethodResolver WorldServerMethodResolver;
 
     public static Entity getEntityById(World world, int entityId) {
