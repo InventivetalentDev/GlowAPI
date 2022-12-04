@@ -20,4 +20,4 @@ jobs:
       uses: actions/upload-artifact@v3
       with: 
         name: GlowAPI
-        path: target/GlowAPI-*.jar
+        path: target/GlowAPI*.jar
