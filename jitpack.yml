@@ -1,6 +1,2 @@
 jdk:
-  - openjdk16
-before_install:
-  - wget https://raw.githubusercontent.com/sormuras/bach/releases/11/install-jdk.sh
-  - source install-jdk.sh --feature 16
-  - jshell --version
+- openjdk17
