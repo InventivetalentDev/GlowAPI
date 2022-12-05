@@ -76,6 +76,9 @@ public class GlowAPI extends PacketHandler implements Listener {
     private static ConstructorResolver PacketScoreboardTeamResolver; // >= 1.17
     private static ConstructorResolver PacketScoreboardTeamInfoResolver; // >= 1.17
 
+    private static MethodResolver EnumNameTagVisibilityResolver; // >= 1.17
+    private static MethodResolver EnumTeamPushResolver; // >= 1.17
+
     private static ConstructorResolver ChatComponentTextResolver;
     private static MethodResolver EnumChatFormatResolver;
     private static MethodResolver IChatBaseComponentMethodResolver;
@@ -465,26 +468,49 @@ public class GlowAPI extends PacketHandler implements Listener {
                     if (PacketScoreboardTeamInfoResolver == null) {
                         PacketScoreboardTeamInfoResolver = new ConstructorResolver(PacketPlayOutScoreboardTeam$info);
                     }
+                    if (EnumNameTagVisibilityResolver == null) {
+                        EnumNameTagVisibilityResolver = new MethodResolver(NMS_CLASS_RESOLVER.resolve(
+                                "world.scores.ScoreboardTeamBase$EnumNameTagVisibility"));
+                    }
+                    if (EnumTeamPushResolver == null) {
+                        EnumTeamPushResolver = new MethodResolver(NMS_CLASS_RESOLVER.resolve(
+                                "world.scores.ScoreboardTeamBase$EnumTeamPush"));
+                    }
 
-                    ScoreboardTeamMethodResolver.resolve(new ResolverQuery[]{
-                            new ResolverQuery("setDisplayName"),
-                            new ResolverQuery("a", NMS_CLASS_RESOLVER.resolve("network.chat.IChatBaseComponent")),
-                    }).invoke(nms$ScoreboardTeam, displayName);
-                    ScoreboardTeamMethodResolver.resolve(new ResolverQuery[]{
-                            new ResolverQuery("setPrefix"),
-                            new ResolverQuery("b", NMS_CLASS_RESOLVER.resolve("network.chat.IChatBaseComponent")),
-                    }).invoke(nms$ScoreboardTeam, prefix);
-                    ScoreboardTeamMethodResolver.resolve(new ResolverQuery[]{
-                            new ResolverQuery("setSuffix"),
-                            new ResolverQuery("c", NMS_CLASS_RESOLVER.resolve("network.chat.IChatBaseComponent")),
-                    }).invoke(nms$ScoreboardTeam, suffix);
-                    ScoreboardTeamMethodResolver.resolve(new ResolverQuery[]{
-                            new ResolverQuery("setColor"),
-                            new ResolverQuery("a", NMS_CLASS_RESOLVER.resolve("EnumChatFormat")),
-                    }).invoke(nms$ScoreboardTeam, color.packetValue);
+                    Object visibilityObj = EnumNameTagVisibilityResolver.resolve("valueOf")
+                            .invoke(null, tagVisibility.toUpperCase());
+                    Object pushObj = EnumTeamPushResolver.resolve("valueOf")
+                            .invoke(null, push.toUpperCase());
+
+                    ScoreboardTeamMethodResolver.resolve(
+                                    new ResolverQuery("setDisplayName"),
+                                    new ResolverQuery("a", NMS_CLASS_RESOLVER.resolve("network.chat.IChatBaseComponent")))
+                            .invoke(nms$ScoreboardTeam, displayName);
+                    ScoreboardTeamMethodResolver.resolve(
+                                    new ResolverQuery("setPrefix"),
+                                    new ResolverQuery("b", NMS_CLASS_RESOLVER.resolve("network.chat.IChatBaseComponent")))
+                            .invoke(nms$ScoreboardTeam, prefix);
+                    ScoreboardTeamMethodResolver.resolve(
+                                    new ResolverQuery("setSuffix"),
+                                    new ResolverQuery("c", NMS_CLASS_RESOLVER.resolve("network.chat.IChatBaseComponent")))
+                            .invoke(nms$ScoreboardTeam, suffix);
+                    ScoreboardTeamMethodResolver.resolve(
+                                    new ResolverQuery("setColor"),
+                                    new ResolverQuery("a", NMS_CLASS_RESOLVER.resolve("EnumChatFormat")))
+                            .invoke(nms$ScoreboardTeam, color.packetValue);
+                    ScoreboardTeamMethodResolver.resolve(
+                                    new ResolverQuery("setNameTagVisibilityRule"),
+                                    new ResolverQuery("a", NMS_CLASS_RESOLVER.resolve("world.scores.ScoreboardTeamBase$EnumNameTagVisibility")))
+                            .invoke(nms$ScoreboardTeam, visibilityObj);
+                    ScoreboardTeamMethodResolver.resolve(
+                                    new ResolverQuery("setCollisionRule"),
+                                    new ResolverQuery("a", NMS_CLASS_RESOLVER.resolve("world.scores.ScoreboardTeamBase$EnumTeamPush")))
+                            .invoke(nms$ScoreboardTeam, pushObj);
 
                     Object packetScoreboardTeamInfo = PacketScoreboardTeamInfoResolver.resolveFirstConstructor().newInstance(nms$ScoreboardTeam);
-                    packetScoreboardTeam = PacketScoreboardTeamResolver.resolve(new Class[]{String.class, int.class, Optional.class, Collection.class}).newInstance(color.getTeamName(), mode, Optional.of(packetScoreboardTeamInfo), ImmutableList.of());
+                    packetScoreboardTeam = PacketScoreboardTeamResolver.resolve(
+                                    new Class[]{String.class, int.class, Optional.class, Collection.class})
+                            .newInstance(color.getTeamName(), mode, Optional.of(packetScoreboardTeamInfo), ImmutableList.of());
                 } else {
                     PacketScoreboardTeamFieldResolver.resolve("g").set(packetScoreboardTeam, color.packetValue);//Color -> this is what we care about
 
