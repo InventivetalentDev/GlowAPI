@@ -8,8 +8,12 @@ import org.inventivetalent.packetlistener.PacketListenerAPI;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Set;
 
 public class GlowPlugin extends JavaPlugin {
+
+    static final Set<String> VALID_VISIBILITY = Set.of("always", "never", "hideForOtherTeams", "hideForOwnTeam");
+    static final Set<String> VALID_COLLISION = Set.of("always", "never", "pushOtherTeams", "pushOwnTeam");
 
     static GlowPlugin instance;
     GlowAPI glowAPI;
@@ -57,10 +61,7 @@ public class GlowPlugin extends JavaPlugin {
 
         String visibility = configuration.getString("nameTagVisibility");
         if (visibility != null) {
-            if (!visibility.equals("always")
-                    && !visibility.equals("hideForOtherTeams")
-                    && !visibility.equals("hideForOwnTeam")
-                    && !visibility.equals("never")) {
+            if (!VALID_VISIBILITY.contains(visibility)) {
                 getLogger().warning("Ignored unknown nameTagVisibility default value: '" + visibility + "'");
             } else {
                 GlowAPI.TEAM_TAG_VISIBILITY = visibility;
@@ -69,10 +70,7 @@ public class GlowPlugin extends JavaPlugin {
 
         String push = configuration.getString("collision");
         if (push != null) {
-            if (!push.equals("always")
-                    && !push.equals("pushOtherTeams")
-                    && !push.equals("pushOwnTeam")
-                    && !push.equals("never")) {
+            if (!VALID_COLLISION.contains(push)) {
                 getLogger().warning("Ignored unknown collision default value: '" + push + "'");
             } else {
                 GlowAPI.TEAM_PUSH = push;
