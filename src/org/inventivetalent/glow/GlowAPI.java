@@ -477,10 +477,12 @@ public class GlowAPI extends PacketHandler implements Listener {
                                 "world.scores.ScoreboardTeamBase$EnumTeamPush"));
                     }
 
-                    Object visibilityObj = EnumNameTagVisibilityResolver.resolve("valueOf")
-                            .invoke(null, tagVisibility.toUpperCase());
-                    Object pushObj = EnumTeamPushResolver.resolve("valueOf")
-                            .invoke(null, push.toUpperCase());
+                    Object visibilityObj = EnumNameTagVisibilityResolver
+                            .resolve(new ResolverQuery("a", String.class), new ResolverQuery("valueOf", String.class))
+                            .invoke(null, tagVisibility);
+                    Object pushObj = EnumTeamPushResolver
+                            .resolve(new ResolverQuery("a", String.class), new ResolverQuery("valueOf", String.class))
+                            .invoke(null, push);
 
                     ScoreboardTeamMethodResolver.resolve(
                                     new ResolverQuery("setDisplayName"),
